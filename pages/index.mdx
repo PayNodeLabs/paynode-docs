@@ -1,0 +1,30 @@
+# Introduction to PayNode
+
+PayNode is the first **stateless, non-custodial payment protocol** specifically designed for AI agents. Built on **Base L2** and utilizing the **x402 standard**, PayNode enables machines to pay and get paid autonomously, with no KYC and zero custodial risk.
+
+## 🚀 Quick Start (5 Minutes)
+
+To integrate PayNode as a merchant or an agent:
+
+1. **Install the SDK**:
+   - JS: `npm install @paynodelabs/sdk-js`
+   - Python: `pip install paynode-sdk-python`
+
+2. **Deploy your Endpoint**: Wrap your API with PayNode middleware to start receiving USDC.
+
+3. **Empower your Agent**: Give your agent a private key and let it handle the 402 handshake.
+
+## 🔑 Key Features
+
+- **Stateless Verification**: No `SSTORE` usage for order tracking; verification is handled via cryptographic receipts.
+- **Atomic Splits**: 99% of funds flow directly to the merchant; 1% goes to the protocol treasury.
+- **Native USDC**: Built on the most liquid stablecoin on Base Mainnet.
+
+## ⛓️ Supported Networks
+
+| Network | Router Address | USDC Address |
+| :--- | :--- | :--- |
+| **Base Mainnet** | `0xA88B...2bb` | `0x8335...913` |
+| **Base Sepolia** | `0x1E12...9b1` | `0xeAC1...798` |
+
+Ready to build? Check out our [Integration Guide](/agents).

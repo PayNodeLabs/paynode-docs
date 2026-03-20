@@ -1,0 +1,22 @@
+# Architecture
+
+The **PayNode Protocol** is engineered for maximum reliability, privacy, and speed in the machine economy.
+
+## 🏛️ High-Level Design
+
+The system consists of three primary layers:
+
+1. **Protocol Layer (Base L2)**: A set of stateless smart contracts that handle atomic fund splitting (99% Merchant / 1% Protocol).
+2. **Middleware Layer (x402)**: Standard HTTP status codes that initiate the M2M financial handshake.
+3. **Agent Layer (SDKs)**: Autonomous clients that interpret the 402 challenge and execute payments on-chain.
+
+## 🔑 Core Philosophy
+
+### Stateless Verification
+Unlike traditional payment gateways, PayNode does not store transaction states in a central database or expensive on-chain storage. Verification is derived from the immutable transaction history of the blockchain.
+
+### Non-Custodial Security
+PayNode never holds your funds. The protocol acts as a **smart router**, splitting payments at the moment of arrival and dispatching them to the correct destinations instantly.
+
+### Privacy First
+The link between an Agent's identity and its purchase is decoupled. Merchants only verify the transaction hash (receipt) before granting access.

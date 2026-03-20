@@ -1,0 +1,31 @@
+# The x402 Protocol Standard
+
+The **x402 protocol** is a stateless, decentralized standard for machine-to-machine (M2M) payments. It leverages the standard HTTP `402 Payment Required` status code to initiate an autonomous financial handshake.
+
+## 🤝 The Handshake Flow
+
+When an AI Agent requests a protected resource, the PayNode-enabled server performs the following sequence:
+
+1. **Request (No Receipt)**: Agent sends a standard HTTP request to the merchant endpoint.
+2. **402 Challenge**: The server responds with `402 Payment Required` and includes PayNode headers:
+   - `x-paynode-contract`: The Router address on Base L2.
+   - `x-paynode-merchant`: The merchant's wallet address.
+   - `x-paynode-amount`: The required USDC amount (in 6 decimals).
+   - `x-paynode-token-address`: Official USDC address on Base.
+   - `x-paynode-order-id`: A unique nonce for the session.
+3. **On-chain Settlement**: The Agent's SDK parses these headers and executes a `pay()` transaction on Base L2.
+4. **Retry with Receipt**: The Agent retries the original request, attaching the `x-paynode-receipt` (Transaction Hash).
+5. **Stateless Verification**: The server verifies the transaction hash on-chain (via RPC) and grants access.
+
+## 🔑 Stateless Philosophy
+
+PayNode does **not** use `SSTORE` to track order states. Instead, it relies on the immutability of the blockchain.
+- **Privacy**: No off-chain database stores the link between agents and orders.
+- **Scalability**: Verification is read-only, reducing gas costs for the protocol.
+- **Non-custodial**: Funds are never held by PayNode; they are split atomically between the merchant and the protocol treasury.
+
+## 💰 Fee Structure
+
+Every transaction is split at the contract level:
+- **99%**: Dispatched immediately to the merchant's wallet.
+- **1%**: Dispatched to the PayNode Protocol Treasury.

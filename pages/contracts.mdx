@@ -1,0 +1,40 @@
+# Smart Contracts & Addresses
+
+PayNode operates on **Base Layer 2**, utilizing a stateless Router for payment dispatching and fee splitting.
+
+## ⛓️ Network Matrix
+
+| Environment | Router Address (L2) | Token (USDC) Address |
+| :--- | :--- | :--- |
+| **Base Mainnet** | `0xA88B5eaD188De39c015AC51F45E1B41D3d95f2bb` | `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` |
+| **Base Sepolia** | `0x1E12700393D3222BC451fb0aEe7351E4eB6779b1` | `0xeAC1f2C7099CdaFfB91Aa3b8Ffd653Ef16935798` |
+
+## 💰 Global Constants
+
+- **Protocol Fee**: 1% (Hardcoded in contract logic).
+- **Merchant Share**: 99%.
+- **Treasury Address**: `0x598bF63F5449876efafa7b36b77Deb2070621C0E`
+
+## 🏗️ Contract: `pay()` Logic
+
+```solidity
+function pay(
+    address token,
+    address merchant,
+    uint256 amount,
+    bytes32 orderId
+) public {
+    // 1% to Treasury
+    uint256 fee = (amount * 100) / 10000;
+    // 99% to Merchant
+    uint256 merchantAmount = amount - fee;
+
+    // Direct atomic transfers
+    IERC20(token).safeTransferFrom(msg.sender, protocolTreasury, fee);
+    IERC20(token).safeTransferFrom(msg.sender, merchant, merchantAmount);
+
+    emit PaymentExecuted(msg.sender, merchant, token, amount, orderId);
+}
+```
+
+The `pay()` function is the engine of the protocol. It ensures atomic settlement with zero risk of funds being stuck in the contract.

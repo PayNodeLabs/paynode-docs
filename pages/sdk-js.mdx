@@ -1,0 +1,44 @@
+# SDK - JavaScript (@paynodelabs/sdk-js)
+
+The official JS SDK provides a robust `PayNodeAgentClient` that automates the entire x402 handshake.
+
+## 🚀 Installation
+
+```bash
+npm install @paynodelabs/sdk-js
+```
+
+## 🛠️ Usage Example (Agent Side)
+
+```typescript
+import { PayNodeAgentClient } from '@paynodelabs/sdk-js';
+
+const client = new PayNodeAgentClient(
+  process.env.PRIVATE_KEY, 
+  "https://mainnet.base.org"
+);
+
+// This single call handles:
+// 1. Initial request
+// 2. Intercepting 402
+// 3. Automated USDC Payment (and ERC20 approval if needed)
+// 4. Retrying with Transaction Hash (Receipt)
+const response = await client.requestGate("https://your-api.com/v1/protected-endpoint", {
+  method: 'POST',
+  json: { data: "hello from agent" }
+});
+
+const result = await response.json();
+console.log("Access Granted:", result);
+```
+
+## ⚙️ Key Methods
+
+### `requestGate(url, options)`
+- Automatically detects `402 Payment Required`.
+- Extracts payment metadata from headers.
+- Executes `pay()` on the Router contract.
+- Injects `x-paynode-receipt` and `x-paynode-order-id` for retries.
+
+### `executeChainPayment(router, merchant, token, amount, orderId)`
+- Low-level manual payment execution if needed.
