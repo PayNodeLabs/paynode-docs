@@ -1,31 +1,54 @@
-# The x402 Protocol Standard
+# The x402 Protocol
 
-The **x402 protocol** is a stateless, decentralized standard for machine-to-machine (M2M) payments. It leverages the standard HTTP `402 Payment Required` status code to initiate an autonomous financial handshake.
+The core of PayNode is an extension of the original (but rarely used) HTTP `402 Payment Required` status code. We call this implementation **x402**.
+
+The protocol defines a standardized handshake between a **Merchant Server** (API provider) and an **AI Agent** (Client).
+
+---
 
 ## 🤝 The Handshake Flow
 
-When an AI Agent requests a protected resource, the PayNode-enabled server performs the following sequence:
+### 1. The Challenge (Server → Agent)
+When an Agent requests a protected resource without prior payment, the server responds with an HTTP `402`. Crucially, it must include specific headers to tell the Agent *how much* to pay and *where* to pay.
 
-1. **Request (No Receipt)**: Agent sends a standard HTTP request to the merchant endpoint.
-2. **402 Challenge**: The server responds with `402 Payment Required` and includes PayNode headers:
-   - `x-paynode-contract`: The Router address on Base L2.
-   - `x-paynode-merchant`: The merchant's wallet address.
-   - `x-paynode-amount`: The required USDC amount (in 6 decimals).
-   - `x-paynode-token-address`: Official USDC address on Base.
-   - `x-paynode-order-id`: A unique nonce for the session.
-3. **On-chain Settlement**: The Agent's SDK parses these headers and executes a `pay()` transaction on Base L2.
-4. **Retry with Receipt**: The Agent retries the original request, attaching the `x-paynode-receipt` (Transaction Hash).
-5. **Stateless Verification**: The server verifies the transaction hash on-chain (via RPC) and grants access.
+**Response Headers:**
+```http
+HTTP/1.1 402 Payment Required
+PayNode-Router-Address: 0xA88B5eaD188De39c015AC51F45E1B41D3d95f2bb
+PayNode-Amount: 1.50
+PayNode-Currency: USDC
+PayNode-Merchant-Address: 0xMerchantWallet...
+```
 
-## 🔑 Stateless Philosophy
+### 2. The Execution (Agent On-Chain)
+The Agent intercepts the `402` response, reads the headers, and initiates an on-chain transaction on **Base L2**.
+The Agent calls the `processPayment` function on the PayNode Router contract, passing the `PayNode-Amount` and the `PayNode-Merchant-Address`.
 
-PayNode does **not** use `SSTORE` to track order states. Instead, it relies on the immutability of the blockchain.
-- **Privacy**: No off-chain database stores the link between agents and orders.
-- **Scalability**: Verification is read-only, reducing gas costs for the protocol.
-- **Non-custodial**: Funds are never held by PayNode; they are split atomically between the merchant and the protocol treasury.
+*Note: The PayNode SDKs handle this step automatically, including infinite approvals and gas optimizations.*
 
-## 💰 Fee Structure
+### 3. The Proof of Management (Agent → Server)
+Once the transaction is mined, the Agent receives a Transaction Hash (TxHash). This acts as a cryptographically verifiable **Proof of Management (POM)**.
+The Agent retries the original HTTP request, this time attaching the POM in the headers.
 
-Every transaction is split at the contract level:
-- **99%**: Dispatched immediately to the merchant's wallet.
-- **1%**: Dispatched to the PayNode Protocol Treasury.
+**Request Headers:**
+```http
+GET /premium-data HTTP/1.1
+X-POM-V1: 0x7249d5255d916c9bd0c2eed128e850d1950d76f571c576048f6cd03c8c2e83da
+```
+
+### 4. Stateless Verification (Server)
+The Merchant's middleware intercepts the request, extracts the `X-POM-V1` hash, and queries the Base L2 RPC to verify:
+1. Does the TxHash exist?
+2. Did it call the official PayNode Router?
+3. Was the `Merchant-Address` correct?
+4. Was the transferred `USDC` amount $\ge$ `PayNode-Amount`?
+5. Has this TxHash been used before? (Replay Protection)
+
+If all checks pass, the server serves the data. No database `orders` table is required.
+
+---
+
+## 🛡️ Security Considerations
+
+* **Replay Attacks:** Merchants MUST implement an LRU cache or Redis store to remember recently verified `X-POM-V1` hashes. A hash should only be valid for a single request (or a defined time window).
+* **RPC Reliability:** Merchants should use dedicated RPC nodes (e.g., Alchemy, Infura) for verifying transactions to prevent rate-limiting during high traffic.

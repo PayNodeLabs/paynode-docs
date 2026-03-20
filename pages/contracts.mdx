@@ -1,40 +1,49 @@
-# Smart Contracts & Addresses
+# Smart Contracts
 
-PayNode operates on **Base Layer 2**, utilizing a stateless Router for payment dispatching and fee splitting.
+PayNode's contracts are minimal, immutable, and fully verified on Arbiscan/Basescan.
 
-## ⛓️ Network Matrix
+## 📍 Contract Addresses
 
-| Environment | Router Address (L2) | Token (USDC) Address |
+The protocol utilizes `CREATE2` to ensure deterministic addresses across all EVM-compatible chains.
+
+| Network | Contract | Address |
 | :--- | :--- | :--- |
-| **Base Mainnet** | `0xA88B5eaD188De39c015AC51F45E1B41D3d95f2bb` | `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` |
-| **Base Sepolia** | `0x1E12700393D3222BC451fb0aEe7351E4eB6779b1` | `0xeAC1f2C7099CdaFfB91Aa3b8Ffd653Ef16935798` |
+| **Base Mainnet** | PayNode Router | `0xA88B5eaD188De39c015AC51F45E1B41D3d95f2bb` |
+| **Base Mainnet** | USDC Token | `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` |
+| **Base Sepolia** | PayNode Router | `0xA88B5eaD188De39c015AC51F45E1B41D3d95f2bb` |
+| **Base Sepolia** | Mock USDC | `0x036CbD53842c5426634e7929541eC2318f3dCF7e` |
 
-## 💰 Global Constants
+*The Treasury Address receiving the 1% protocol fee is `0x598bF63F5449876efafa7b36b77Deb2070621C0E`.*
 
-- **Protocol Fee**: 1% (Hardcoded in contract logic).
-- **Merchant Share**: 99%.
-- **Treasury Address**: `0x598bF63F5449876efafa7b36b77Deb2070621C0E`
+---
 
-## 🏗️ Contract: `pay()` Logic
+## 📄 Core ABI
+
+If you are building custom clients without our SDKs, you will need to interact with the `processPayment` function.
 
 ```solidity
-function pay(
-    address token,
-    address merchant,
-    uint256 amount,
-    bytes32 orderId
-) public {
-    // 1% to Treasury
-    uint256 fee = (amount * 100) / 10000;
-    // 99% to Merchant
-    uint256 merchantAmount = amount - fee;
-
-    // Direct atomic transfers
-    IERC20(token).safeTransferFrom(msg.sender, protocolTreasury, fee);
-    IERC20(token).safeTransferFrom(msg.sender, merchant, merchantAmount);
-
-    emit PaymentExecuted(msg.sender, merchant, token, amount, orderId);
+interface IPayNodeRouter {
+    /**
+     * @dev Executes the atomic 99/1 split for a payment.
+     * @param token Address of the ERC20 token (e.g., USDC).
+     * @param amount Total amount to be paid (in lowest decimals, e.g., 6 for USDC).
+     * @param merchant Address of the receiving merchant.
+     */
+    function processPayment(
+        address token,
+        uint256 amount,
+        address merchant
+    ) external;
 }
 ```
 
-The `pay()` function is the engine of the protocol. It ensures atomic settlement with zero risk of funds being stuck in the contract.
+### Payment Flow (Manual)
+
+1. The Agent must call `USDC.approve(RouterAddress, amount)`.
+2. The Agent calls `Router.processPayment(USDC_Address, amount, MerchantAddress)`.
+3. The Router transfers `amount` from the Agent to itself.
+4. The Router calculates `merchantShare = amount * 99 / 100`.
+5. The Router calculates `protocolShare = amount - merchantShare`.
+6. The Router transfers `merchantShare` to `merchant`.
+7. The Router transfers `protocolShare` to `Treasury`.
+8. The transaction succeeds and emits a `PaymentProcessed` event.

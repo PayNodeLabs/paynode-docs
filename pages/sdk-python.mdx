@@ -1,39 +1,65 @@
-# SDK - Python (paynode-sdk-python)
+# Python SDK (`paynode-sdk-python`)
 
-Built on **Web3.py**, the Python SDK is designed for AI agents (LangChain, AutoGPT, etc.) that need to consume paid resources autonomously on Base L2.
+The Python SDK is highly optimized for Python-based AI workflows (e.g., LangChain, AutoGen) and modern Python backends (FastAPI).
 
-## 🚀 Installation
+## 📦 Installation
 
 ```bash
-pip install paynode-sdk-python
+pip install paynode-sdk-python web3
 ```
 
-## 🛠️ Usage Example
+---
+
+## 🤖 For AI Agents (Client)
+
+The `Client` class inherits from `requests.Session`. It intercepts `402` errors and seamlessly executes the Base L2 payment before returning the final response.
 
 ```python
-from paynode_sdk.client import PayNodeAgentClient
+import os
+from paynode_sdk import Client
 
-client = PayNodeAgentClient(
-    rpc_urls=["https://mainnet.base.org"],
-    private_key="YOUR_PRIVATE_KEY"
-)
+# 1. Initialize with private key
+agent = Client(private_key=os.getenv("AGENT_PRIVATE_KEY"))
 
-# This call handles the entire x402 handshake autonomously
-response = client.post(
-    url="https://api.yourmerchant.com/api/v1/protected",
-    json={"agent_name": "Python-Agent-Pioneer"}
-)
+# 2. Make standard requests
+# If the server returns 402, the Client pays and retries automatically.
+response = agent.get("https://api.merchant.com/inference")
 
 if response.status_code == 200:
-    print("✅ Resource Accessed:", response.json())
+    print("Data acquired:", response.json())
+else:
+    print("Failed with status:", response.status_code)
 ```
 
-## 🔐 ERC20 Allowance Management
+### Gas Optimization
+The Python SDK automatically applies a **20% `gas_price` boost** to ensure transactions are mined rapidly, avoiding `replacement transaction underpriced` errors during sequential payments.
 
-The Python SDK automatically manages your USDC allowance. If it detects a low allowance for the PayNode Router, it will:
-1. **Grant Infinite Approval** once to save gas on future transactions.
-2. **Handle Nonces** by checking the pending state to avoid conflicts in high-frequency payment streams.
+---
 
-## ⛽ Gas Strategy
+## 🏪 For Merchants (FastAPI Middleware)
 
-The SDK automatically boosts the current network gas price by **20%** during payment execution to ensure reliable inclusion in Base Mainnet blocks during periods of network congestion.
+The `PayNodeMiddleware` is designed to be injected into FastAPI routes seamlessly.
+
+```python
+from fastapi import FastAPI, Depends
+from paynode_sdk.middleware import PayNodeMiddleware
+import os
+
+app = FastAPI()
+
+# 1. Configure the requirement
+require_payment = PayNodeMiddleware(
+    price=0.50, # 0.50 USDC
+    merchant_wallet="0xYourWalletAddress...",
+    rpc_url=os.getenv("BASE_RPC_URL", "https://mainnet.base.org")
+)
+
+# 2. Inject as a dependency
+@app.post("/generate-image", dependencies=[Depends(require_payment)])
+def generate_image(prompt: str):
+    # This block only executes if payment is verified on-chain
+    return {
+        "status": "success",
+        "image_url": "https://bucket.com/image.png"
+    }
+```

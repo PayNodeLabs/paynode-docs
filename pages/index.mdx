@@ -1,30 +1,26 @@
-# Introduction to PayNode
+# Welcome to PayNode Protocol
 
-PayNode is the first **stateless, non-custodial payment protocol** specifically designed for AI agents. Built on **Base L2** and utilizing the **x402 standard**, PayNode enables machines to pay and get paid autonomously, with no KYC and zero custodial risk.
+**PayNode** is a stateless, non-custodial Machine-to-Machine (M2M) payment gateway. It is designed to bridge the gap between AI Agents and the API economy.
 
-## 🚀 Quick Start (5 Minutes)
+Currently, if an AI Agent hits an API that requires a credit card, it gets stuck. PayNode solves this by standardizing the HTTP `402 Payment Required` status code, allowing Agents to autonomously pay for digital resources using **USDC on Base L2**.
 
-To integrate PayNode as a merchant or an agent:
+## 🌟 Why PayNode?
 
-1. **Install the SDK**:
-   - JS: `npm install @paynodelabs/sdk-js`
-   - Python: `pip install paynode-sdk-python`
+* **Agent-Native:** Built specifically for autonomous LLMs and scraping scripts. No UI required.
+* **Deterministic:** Runs entirely on-chain on Base L2. No central databases, no KYC.
+* **Stateless Verification:** Merchants verify payments via cryptographic transaction receipts (TxHash). No need to maintain complex order states.
+* **Fair Economics:** A hardcoded, atomic split. 99% of the payment goes directly to the Merchant's wallet. 1% is routed to the Protocol Treasury.
 
-2. **Deploy your Endpoint**: Wrap your API with PayNode middleware to start receiving USDC.
+## 📚 Documentation Navigation
 
-3. **Empower your Agent**: Give your agent a private key and let it handle the 402 handshake.
+To get started, explore the sections below:
 
-## 🔑 Key Features
+1. **[Protocol (x402)](/protocol)**: Understand the HTTP handshake and how the `402` status code is utilized.
+2. **[Architecture](/architecture)**: Deep dive into the smart contracts and the "Don't Trust, Verify" philosophy.
+3. **[JavaScript SDK](/sdk-js)**: Detailed guides for integrating PayNode in TypeScript/Node.js environments.
+4. **[Python SDK](/sdk-python)**: Detailed guides for integrating PayNode in Python (FastAPI/Requests) environments.
+5. **[Smart Contracts](/contracts)**: Contract addresses, ABI details, and Mainnet verification.
 
-- **Stateless Verification**: No `SSTORE` usage for order tracking; verification is handled via cryptographic receipts.
-- **Atomic Splits**: 99% of funds flow directly to the merchant; 1% goes to the protocol treasury.
-- **Native USDC**: Built on the most liquid stablecoin on Base Mainnet.
+## 🚀 The Vision
 
-## ⛓️ Supported Networks
-
-| Network | Router Address | USDC Address |
-| :--- | :--- | :--- |
-| **Base Mainnet** | `0xA88B...2bb` | `0x8335...913` |
-| **Base Sepolia** | `0x1E12...9b1` | `0xeAC1...798` |
-
-Ready to build? Check out our [Integration Guide](/agents).
+We believe in a Sovereign AI Future where machines can frictionlessly transact with one another. PayNode provides the missing financial primitive for the machine economy.

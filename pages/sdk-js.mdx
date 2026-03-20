@@ -1,44 +1,72 @@
-# SDK - JavaScript (@paynodelabs/sdk-js)
+# JavaScript SDK (`@paynodelabs/sdk-js`)
 
-The official JS SDK provides a robust `PayNodeAgentClient` that automates the entire x402 handshake.
+The JavaScript SDK provides both client-side tools for AI Agents (Payer) and server-side middleware for Merchants (Receiver).
 
-## 🚀 Installation
+## 📦 Installation
 
 ```bash
-npm install @paynodelabs/sdk-js
+npm install @paynodelabs/sdk-js ethers
 ```
 
-## 🛠️ Usage Example (Agent Side)
+---
+
+## 🤖 For AI Agents (Client)
+
+The `PayNodeClient` is a wrapper that automatically handles `402` responses, executes USDC payments, and retries requests.
 
 ```typescript
-import { PayNodeAgentClient } from '@paynodelabs/sdk-js';
+import { PayNodeClient } from '@paynodelabs/sdk-js';
 
-const client = new PayNodeAgentClient(
-  process.env.PRIVATE_KEY, 
-  "https://mainnet.base.org"
-);
+// 1. Initialize with the Agent's private key
+// Ensure this wallet has Base ETH (for gas) and Base USDC (for payment)
+const client = new PayNodeClient(process.env.AGENT_PRIVATE_KEY);
 
-// This single call handles:
-// 1. Initial request
-// 2. Intercepting 402
-// 3. Automated USDC Payment (and ERC20 approval if needed)
-// 4. Retrying with Transaction Hash (Receipt)
-const response = await client.requestGate("https://your-api.com/v1/protected-endpoint", {
-  method: 'POST',
-  json: { data: "hello from agent" }
-});
+async function fetchData() {
+    try {
+        // 2. Make a request. The SDK handles the 402 handshake internally.
+        const response = await client.request('https://api.merchant.com/data', {
+            method: 'GET'
+        });
 
-const result = await response.json();
-console.log("Access Granted:", result);
+        const data = await response.json();
+        console.log("Success:", data);
+        
+    } catch (error) {
+        console.error("Payment or Request Failed:", error);
+    }
+}
 ```
 
-## ⚙️ Key Methods
+### Mainnet Hardening
+The JS SDK automatically performs **Infinite Approvals** for the Router to save gas on subsequent calls, and overrides `gasLimit` to prevent `estimateGas` flakiness during network congestion.
 
-### `requestGate(url, options)`
-- Automatically detects `402 Payment Required`.
-- Extracts payment metadata from headers.
-- Executes `pay()` on the Router contract.
-- Injects `x-paynode-receipt` and `x-paynode-order-id` for retries.
+---
 
-### `executeChainPayment(router, merchant, token, amount, orderId)`
-- Low-level manual payment execution if needed.
+## 🏪 For Merchants (Express Middleware)
+
+The `createPayNodeMiddleware` protects your routes by enforcing a stateless USDC payment via the `X-POM-V1` header.
+
+```typescript
+import express from 'express';
+import { createPayNodeMiddleware } from '@paynodelabs/sdk-js';
+
+const app = express();
+
+// 1. Define the cost and your receiving wallet
+const requirePayment = createPayNodeMiddleware({
+    price: "2.50", // Cost in USDC
+    merchantWallet: "0xYourWalletAddress...",
+    rpcUrl: process.env.BASE_RPC_URL || "https://mainnet.base.org"
+});
+
+// 2. Protect the route
+app.get('/api/ai-inference', requirePayment, (req, res) => {
+    // This code ONLY runs if a valid, un-replayed TxHash was provided
+    res.json({
+        result: "The meaning of life is 42.",
+        paid: true
+    });
+});
+
+app.listen(3000, () => console.log('Merchant Server running on port 3000'));
+```

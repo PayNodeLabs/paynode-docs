@@ -1,22 +1,37 @@
 # Architecture
 
-The **PayNode Protocol** is engineered for maximum reliability, privacy, and speed in the machine economy.
+The **PayNode Protocol** is engineered for maximum reliability, privacy, and speed in the machine economy. We firmly believe in the **"Don't Trust, Verify"** philosophy.
 
 ## 🏛️ High-Level Design
 
 The system consists of three primary layers:
 
-1. **Protocol Layer (Base L2)**: A set of stateless smart contracts that handle atomic fund splitting (99% Merchant / 1% Protocol).
-2. **Middleware Layer (x402)**: Standard HTTP status codes that initiate the M2M financial handshake.
-3. **Agent Layer (SDKs)**: Autonomous clients that interpret the 402 challenge and execute payments on-chain.
+1. **Protocol Layer (Base L2)**: A deterministic, immutable set of smart contracts that handle atomic fund splitting.
+2. **Middleware Layer (x402)**: Standard HTTP `402` and `X-POM-V1` headers that initiate and verify the M2M financial handshake.
+3. **Agent Layer (SDKs)**: Autonomous clients that intercept 402 challenges, sign transactions locally, and execute payments on-chain.
+
+---
 
 ## 🔑 Core Philosophy
 
 ### Stateless Verification
-Unlike traditional payment gateways, PayNode does not store transaction states in a central database or expensive on-chain storage. Verification is derived from the immutable transaction history of the blockchain.
+Unlike traditional payment gateways (Stripe, PayPal), PayNode does not store transaction states in a central database or require expensive on-chain `SSTORE` operations for order tracking.
+Verification is derived entirely from the immutable transaction history (Receipts) of the blockchain. If the blockchain says the money arrived, the server grants access.
 
 ### Non-Custodial Security
-PayNode never holds your funds. The protocol acts as a **smart router**, splitting payments at the moment of arrival and dispatching them to the correct destinations instantly.
+PayNode **never** holds your funds. The Router contract acts as a transparent, programmable pipeline. The exact moment an Agent transfers USDC, the contract atomically splits it:
+- **99%** is transferred directly to the Merchant's wallet address.
+- **1%** is transferred to the PayNode Protocol Treasury.
+There are no withdrawal delays, no central pooling, and no freeze risks.
 
 ### Privacy First
-The link between an Agent's identity and its purchase is decoupled. Merchants only verify the transaction hash (receipt) before granting access.
+The link between an Agent's identity and its purchase is decoupled. The Agent's IP address or local identity is never recorded on-chain. Merchants only verify the transaction hash (receipt) before granting access.
+
+---
+
+## ⚡ Why Base L2?
+
+PayNode is exclusively deployed on **Base** (by Coinbase). We chose Base for several critical reasons:
+1. **Negligible Gas Fees:** Transactions typically cost a fraction of a cent, making micro-transactions (e.g., $0.05 API calls) economically viable.
+2. **Speed:** ~2-second block times ensure that the 402 handshake completes almost instantly, avoiding long API timeouts.
+3. **Ecosystem:** Native integration with Coinbase provides deep liquidity for USDC, allowing Merchants to off-ramp seamlessly.
