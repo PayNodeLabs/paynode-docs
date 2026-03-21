@@ -1,49 +1,106 @@
 # Smart Contracts
 
-PayNode's contracts are minimal, immutable, and fully verified on Arbiscan/Basescan.
+PayNode's contracts are minimal, immutable, and fully verified on Basescan. The protocol uses `CREATE2` for deterministic addresses across all EVM chains.
+
+---
 
 ## 📍 Contract Addresses
 
-The protocol utilizes `CREATE2` to ensure deterministic addresses across all EVM-compatible chains.
-
-| Network | Contract | Address |
-| :--- | :--- | :--- |
-| **Base Mainnet** | PayNode Router | `0xA88B5eaD188De39c015AC51F45E1B41D3d95f2bb` |
-| **Base Mainnet** | USDC Token | `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` |
-| **Base Sepolia** | PayNode Router | `0xA88B5eaD188De39c015AC51F45E1B41D3d95f2bb` |
-| **Base Sepolia** | Mock USDC | `0x036CbD53842c5426634e7929541eC2318f3dCF7e` |
-
 *The Treasury Address receiving the 1% protocol fee is `0x598bF63F5449876efafa7b36b77Deb2070621C0E`.*
+
+### 🔵 Base Mainnet (Production)
+
+| Configuration | Value |
+| :--- | :--- |
+| **Chain ID** | `8453` |
+| **Public RPC** | `https://mainnet.base.org` |
+| **Block Explorer** | [Basescan](https://basescan.org) |
+| **PayNode Router** | `0x92e20164FC457a2aC35f53D06268168e6352b200` |
+| **USDC** | `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` |
+| **USDT** | `0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2` |
+
+### 🧪 Base Sepolia (Testnet / Sandbox)
+
+> **💡 How to get Testnet Funds?**
+> 1. **Base Sepolia ETH (Gas)**: [Alchemy Base Faucet](https://www.alchemy.com/faucets/base-sepolia)
+> 2. **Mock USDC (Payment)**: Call `Mock_USDC.mint(address, amount)` via the "Write Contract" tab on Basescan.
+
+| Configuration | Value |
+| :--- | :--- |
+| **Chain ID** | `84532` |
+| **Public RPC** | `https://sepolia.base.org` |
+| **Block Explorer** | [Basescan Sepolia](https://sepolia.basescan.org) |
+| **PayNode Router** | `0xB587Bc36aaCf65962eCd6Ba59e2DA76f2f575408` |
+| **Mock USDC** | `0xeAC1f2C7099CdaFfB91Aa3b8Ffd653Ef16935798` |
 
 ---
 
 ## 📄 Core ABI
 
-If you are building custom clients without our SDKs, you will need to interact with the `processPayment` function.
+### `pay` — Standard Payment
 
 ```solidity
-interface IPayNodeRouter {
-    /**
-     * @dev Executes the atomic 99/1 split for a payment.
-     * @param token Address of the ERC20 token (e.g., USDC).
-     * @param amount Total amount to be paid (in lowest decimals, e.g., 6 for USDC).
-     * @param merchant Address of the receiving merchant.
-     */
-    function processPayment(
-        address token,
-        uint256 amount,
-        address merchant
-    ) external;
-}
+function pay(
+    address token,       // ERC20 token (e.g. USDC)
+    address merchant,    // Merchant receiving 99%
+    uint256 amount,      // Total amount (smallest unit)
+    bytes32 orderId      // External tracking ID
+) external;
 ```
 
-### Payment Flow (Manual)
+### `payWithPermit` — Single-Tx Payment (EIP-2612)
 
-1. The Agent must call `USDC.approve(RouterAddress, amount)`.
-2. The Agent calls `Router.processPayment(USDC_Address, amount, MerchantAddress)`.
-3. The Router transfers `amount` from the Agent to itself.
-4. The Router calculates `merchantShare = amount * 99 / 100`.
-5. The Router calculates `protocolShare = amount - merchantShare`.
-6. The Router transfers `merchantShare` to `merchant`.
-7. The Router transfers `protocolShare` to `Treasury`.
-8. The transaction succeeds and emits a `PaymentProcessed` event.
+Allows a third-party relayer (e.g. AI Agent) to pay on behalf of a token holder using an offline signature. No prior `approve()` needed.
+
+```solidity
+function payWithPermit(
+    address payer,       // Token holder who signed the permit
+    address token,       // ERC20 token with EIP-2612 support
+    address merchant,    // Merchant receiving 99%
+    uint256 amount,      // Total amount
+    bytes32 orderId,     // External tracking ID
+    uint256 deadline,    // Permit expiry timestamp
+    uint8 v, bytes32 r, bytes32 s  // ECDSA signature
+) external;
+```
+
+### `PaymentReceived` Event
+
+Emitted on every successful payment. SDK Verifiers decode this event for on-chain verification.
+
+```solidity
+event PaymentReceived(
+    bytes32 indexed orderId,
+    address indexed merchant,
+    address indexed payer,
+    address token,
+    uint256 amount,
+    uint256 fee,
+    uint256 chainId      // Cross-chain replay protection
+);
+```
+
+---
+
+## 🛡️ Security Features
+
+| Feature | Description |
+| :--- | :--- |
+| **SafeERC20** | Handles non-standard ERC20 return values safely |
+| **Ownable2Step** | Two-step ownership transfer prevents accidental lockout |
+| **Pausable** | Owner can emergency-pause all payments |
+| **Custom Errors** | `InvalidAddress()`, `AmountMustBeGreaterThanZero()` — saves gas vs string requires |
+| **Deterministic Deploy** | `CREATE2` ensures same address across all EVM chains |
+| **ChainId in Events** | Prevents cross-chain replay attacks |
+
+---
+
+## Payment Flow (Manual Integration)
+
+If building without the SDK:
+
+1. `USDC.approve(RouterAddress, amount)`
+2. `Router.pay(USDC_Address, merchant, amount, orderId)`
+3. Router atomically splits: **99%** → merchant, **1%** → treasury
+4. `PaymentReceived` event is emitted
+5. Verify the event in your backend to confirm payment
