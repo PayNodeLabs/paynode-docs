@@ -1,26 +1,33 @@
 # Welcome to PayNode Protocol
 
-**PayNode** is a stateless, non-custodial Machine-to-Machine (M2M) payment gateway. It is designed to bridge the gap between AI Agents and the API economy.
+**PayNode** is a stateless, non-custodial Machine-to-Machine (M2M) payment gateway. It bridges the gap between AI Agents and the API economy.
 
-Currently, if an AI Agent hits an API that requires a credit card, it gets stuck. PayNode solves this by standardizing the HTTP `402 Payment Required` status code, allowing Agents to autonomously pay for digital resources using **USDC on Base L2**.
+When an AI Agent hits an API that requires payment, it gets stuck. PayNode solves this by standardizing the HTTP `402 Payment Required` status code, allowing Agents to autonomously pay for digital resources using **USDC on Base L2**.
 
 ## 🌟 Why PayNode?
 
-* **Agent-Native:** Built specifically for autonomous LLMs and scraping scripts. No UI required.
-* **Deterministic:** Runs entirely on-chain on Base L2. No central databases, no KYC.
-* **Stateless Verification:** Merchants verify payments via cryptographic transaction receipts (TxHash). No need to maintain complex order states.
-* **Fair Economics:** A hardcoded, atomic split. 99% of the payment goes directly to the Merchant's wallet. 1% is routed to the Protocol Treasury.
+| | Traditional Gateways (Stripe) | **PayNode** |
+| :--- | :--- | :--- |
+| **Integration** | Days of database setup, webhook endpoints, settlement reconciliation | 5-minute SDK drop-in. No database needed. |
+| **Verification** | Asynchronous callbacks, webhook retries, database `orders` tables | Stateless: verify a txHash on-chain like verifying a JWT |
+| **Settlement** | T+7 or T+2 delays, frozen assets risk | Instant. Atomic 99/1 split — funds arrive in merchant wallet within 2 seconds |
+| **Agent-Native** | Requires UI, manual card input | Zero UI. HTTPS-native silent autonomous payments |
+| **Privacy** | KYC required, identity tracked | Zero KYC. Agent identity never recorded on-chain |
 
-## 📚 Documentation Navigation
+## 📚 Documentation
 
-To get started, explore the sections below:
-
-1. **[Protocol (x402)](/protocol)**: Understand the HTTP handshake and how the `402` status code is utilized.
-2. **[Architecture](/architecture)**: Deep dive into the smart contracts and the "Don't Trust, Verify" philosophy.
-3. **[JavaScript SDK](/sdk-js)**: Detailed guides for integrating PayNode in TypeScript/Node.js environments.
-4. **[Python SDK](/sdk-python)**: Detailed guides for integrating PayNode in Python (FastAPI/Requests) environments.
-5. **[Smart Contracts](/contracts)**: Contract addresses, ABI details, and Mainnet verification.
+1. **[⚡ Quickstart (5 min)](/quickstart)** — Build a merchant server + agent client from scratch. Run locally, verify on Basescan.
+2. **[Protocol (x402)](/protocol)** — How the `402` handshake works, with sequence diagrams and security analysis.
+3. **[JavaScript SDK](/sdk-js)** — Agent client, Express middleware, Permit payments, Token whitelist.
+4. **[Python SDK](/sdk-python)** — Agent client, FastAPI middleware, thread-safe nonce management.
+5. **[Smart Contracts](/contracts)** — Mainnet/Testnet addresses, RPCs, ABI reference, security features.
+6. **[Webhooks](/webhooks)** — Real-time payment notifications with HMAC-SHA256 verification.
+7. **[🚨 Error Codes](/error-codes)** — Troubleshoot any error from SDK, server, or RPC.
 
 ## 🚀 The Vision
 
-We believe in a Sovereign AI Future where machines can frictionlessly transact with one another. PayNode provides the missing financial primitive for the machine economy.
+We believe in a Sovereign AI Future where machines frictionlessly transact with one another. PayNode provides the missing financial primitive for the machine economy.
+
+---
+
+> **Quick Links**: [GitHub](https://github.com/paynodelabs) · [Basescan Router](https://basescan.org/address/0xA88B5eaD188De39c015AC51F45E1B41D3d95f2bb) · [Base Sepolia Explorer](https://sepolia.basescan.org)

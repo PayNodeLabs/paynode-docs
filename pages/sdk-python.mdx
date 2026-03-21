@@ -1,65 +1,157 @@
 # Python SDK (`paynode-sdk-python`)
 
-The Python SDK is highly optimized for Python-based AI workflows (e.g., LangChain, AutoGen) and modern Python backends (FastAPI).
+The Python SDK is optimized for Python-based AI workflows (LangChain, AutoGen, CrewAI) and modern backends (FastAPI).
 
 ## 📦 Installation
 
 ```bash
 pip install paynode-sdk-python web3
+# Optional: for webhook delivery
+pip install aiohttp
 ```
 
 ---
 
 ## 🤖 For AI Agents (Client)
 
-The `Client` class inherits from `requests.Session`. It intercepts `402` errors and seamlessly executes the Base L2 payment before returning the final response.
+> **⚠️ Prerequisites**
+>
+> The Agent's wallet must hold **Base ETH** (gas) and **USDC** (payment).
+> First time? See [Contracts](/contracts) for testnet faucet instructions.
+
+The `PayNodeAgentClient` intercepts `402` responses, executes on-chain payment, and retries automatically.
 
 ```python
 import os
-from paynode_sdk import Client
+from paynode_sdk import PayNodeAgentClient
 
-# 1. Initialize with private key
-agent = Client(private_key=os.getenv("AGENT_PRIVATE_KEY"))
+agent = PayNodeAgentClient(
+    rpc_urls=["https://mainnet.base.org"],
+    private_key=os.getenv("AGENT_PRIVATE_KEY")
+)
 
-# 2. Make standard requests
-# If the server returns 402, the Client pays and retries automatically.
-response = agent.get("https://api.merchant.com/inference")
-
-if response.status_code == 200:
-    print("Data acquired:", response.json())
-else:
-    print("Failed with status:", response.status_code)
+# Standard requests — 402 payment is handled autonomously
+response = agent.get("https://api.merchant.com/premium-data")
+print("✅ Data:", response.json())
 ```
 
-### Gas Optimization
-The Python SDK automatically applies a **20% `gas_price` boost** to ensure transactions are mined rapidly, avoiding `replacement transaction underpriced` errors during sequential payments.
+### Security: Private Key Protection
+
+The SDK converts the private key to an `Account` object on initialization and discards the raw string. If a transaction fails, the error message is intercepted and wrapped in a `PayNodeException` — preventing accidental key leaks in stack traces (e.g. LangChain debug logs).
+
+### EIP-2612 Permit (Single-Tx Payment)
+
+For gasless single-transaction payments using an offline signature:
+
+```python
+# Payer signs offline, Agent relays on-chain
+tx_hash = agent.pay_with_permit(
+    router_addr="0xA88B5eaD188De39c015AC51F45E1B41D3d95f2bb",
+    payer_address="0xPayerWallet...",
+    token_addr="0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+    merchant_addr="0xMerchantWallet...",
+    amount=1000000,         # 1 USDC (6 decimals)
+    order_id="order_123",
+    deadline=1716000000,    # Unix timestamp
+    v=28, r=b'\x...', s=b'\x...'
+)
+```
 
 ---
 
 ## 🏪 For Merchants (FastAPI Middleware)
 
-The `PayNodeMiddleware` is designed to be injected into FastAPI routes seamlessly.
+`PayNodeMiddleware` integrates into FastAPI as ASGI middleware.
 
 ```python
-from fastapi import FastAPI, Depends
-from paynode_sdk.middleware import PayNodeMiddleware
+from fastapi import FastAPI
+from paynode_sdk import PayNodeMiddleware
 import os
 
 app = FastAPI()
 
-# 1. Configure the requirement
-require_payment = PayNodeMiddleware(
-    price=0.50, # 0.50 USDC
-    merchant_wallet="0xYourWalletAddress...",
-    rpc_url=os.getenv("BASE_RPC_URL", "https://mainnet.base.org")
+# Add PayNode payment gate as middleware
+app.add_middleware(
+    PayNodeMiddleware,
+    rpc_url=os.getenv("BASE_RPC_URL", "https://mainnet.base.org"),
+    contract_address="0xA88B5eaD188De39c015AC51F45E1B41D3d95f2bb",
+    merchant_address="0xYourWallet...",
+    chain_id=8453,
+    currency="USDC",
+    token_address="0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+    price="0.50",
+    decimals=6,
 )
 
-# 2. Inject as a dependency
-@app.post("/generate-image", dependencies=[Depends(require_payment)])
-def generate_image(prompt: str):
-    # This block only executes if payment is verified on-chain
-    return {
-        "status": "success",
-        "image_url": "https://bucket.com/image.png"
-    }
+@app.get("/api/inference")
+def inference():
+    # This ONLY runs after verified on-chain payment
+    return {"result": "AI inference output", "paid": True}
 ```
+
+### 402 Response Headers
+
+When a request lacks `x-paynode-receipt`, the middleware returns `402` with headers identical to the [JS SDK middleware headers](/sdk-js#middleware-headers).
+
+---
+
+## 🛡️ Token Whitelist
+
+The Verifier includes a built-in `ACCEPTED_TOKENS` whitelist per chain to block fake-token attacks.
+
+```python
+from paynode_sdk import PayNodeVerifier
+from paynode_sdk.constants import ACCEPTED_TOKENS
+
+# Auto-detect from chainId (recommended)
+verifier = PayNodeVerifier(
+    rpc_url="https://mainnet.base.org",
+    contract_address="0xA88B...",
+    chain_id=8453,
+    # Automatically uses ACCEPTED_TOKENS[8453] = [USDC, USDT]
+)
+
+# Override with custom list
+verifier = PayNodeVerifier(
+    rpc_url="https://mainnet.base.org",
+    contract_address="0xA88B...",
+    chain_id=8453,
+    accepted_tokens=["0xCustomToken..."],
+)
+
+# Disable whitelist (testing only)
+verifier = PayNodeVerifier(
+    rpc_url="http://localhost:8545",
+    contract_address="0x1234...",
+    chain_id=8453,
+    accepted_tokens=[]  # Empty = no whitelist check
+)
+```
+
+---
+
+## 🔒 Thread Safety & Concurrency
+
+The Python SDK uses `threading.Lock()` for atomic nonce management. When multiple tools/threads send concurrent transactions, nonces are queued and incremented safely — avoiding `nonce too low` errors.
+
+```python
+# Safe for multi-threaded usage
+import threading
+
+def tool_call(agent, url):
+    response = agent.get(url)  # Thread-safe nonce handling
+    return response.json()
+
+threads = [
+    threading.Thread(target=tool_call, args=(agent, url))
+    for url in paid_api_urls
+]
+for t in threads:
+    t.start()
+```
+
+---
+
+## 📡 Webhook Notifications
+
+See the dedicated [Webhooks](/webhooks) page for async event-driven payment notifications.

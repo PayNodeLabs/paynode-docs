@@ -1,72 +1,172 @@
 # JavaScript SDK (`@paynodelabs/sdk-js`)
 
-The JavaScript SDK provides both client-side tools for AI Agents (Payer) and server-side middleware for Merchants (Receiver).
+The JavaScript SDK provides both **client-side** tools for AI Agents (Payer) and **server-side** middleware for Merchants (Receiver).
 
 ## 📦 Installation
 
 ```bash
 npm install @paynodelabs/sdk-js ethers
+# Optional: for production Redis idempotency
+npm install ioredis
 ```
 
 ---
 
 ## 🤖 For AI Agents (Client)
 
-The `PayNodeClient` is a wrapper that automatically handles `402` responses, executes USDC payments, and retries requests.
+> **⚠️ Prerequisites**
+>
+> The Agent's wallet must hold **Base ETH** (for gas) and **USDC** (for payment).
+> First time? See the [Contracts](/contracts) page for testnet faucet instructions.
+
+The `PayNodeAgentClient` automatically handles `402` responses, executes USDC payments on-chain, and retries the original request.
 
 ```typescript
-import { PayNodeClient } from '@paynodelabs/sdk-js';
+import { PayNodeAgentClient } from '@paynodelabs/sdk-js';
 
-// 1. Initialize with the Agent's private key
-// Ensure this wallet has Base ETH (for gas) and Base USDC (for payment)
-const client = new PayNodeClient(process.env.AGENT_PRIVATE_KEY);
+// Initialize with private key and RPC
+const agent = new PayNodeAgentClient(
+  process.env.AGENT_PRIVATE_KEY,
+  'https://mainnet.base.org'
+);
 
-async function fetchData() {
-    try {
-        // 2. Make a request. The SDK handles the 402 handshake internally.
-        const response = await client.request('https://api.merchant.com/data', {
-            method: 'GET'
-        });
-
-        const data = await response.json();
-        console.log("Success:", data);
-        
-    } catch (error) {
-        console.error("Payment or Request Failed:", error);
-    }
-}
+// Make requests — 402 payment is handled autonomously
+const response = await agent.requestGate('https://api.merchant.com/premium-data');
+const data = await response.json();
+console.log('✅ Data:', data);
 ```
 
-### Mainnet Hardening
-The JS SDK automatically performs **Infinite Approvals** for the Router to save gas on subsequent calls, and overrides `gasLimit` to prevent `estimateGas` flakiness during network congestion.
+### EIP-2612 Permit (Single-Tx Payment)
+
+For gasless (from the payer's perspective) single-transaction payments using EIP-2612 Permit:
+
+```typescript
+const agent = new PayNodeAgentClient(PAYER_PRIVATE_KEY, RPC_URL);
+
+// 1. Payer signs a permit offline (no gas needed)
+const { deadline, v, r, s } = await agent.signPermit(
+  USDC_ADDRESS,                    // Token
+  PAYNODE_ROUTER_ADDRESS,          // Spender (Router)
+  1000000n,                        // 1 USDC (6 decimals)
+  3600                             // Valid for 1 hour
+);
+
+// 2. Any relayer/Agent can submit on-chain (pays gas)
+const txHash = await agent.payWithPermit(
+  PAYNODE_ROUTER_ADDRESS,
+  PAYER_WALLET_ADDRESS,            // Token holder
+  USDC_ADDRESS,
+  MERCHANT_ADDRESS,
+  1000000n,                        // Amount
+  orderId,                         // bytes32
+  deadline, v, r, s
+);
+```
 
 ---
 
 ## 🏪 For Merchants (Express Middleware)
 
-The `createPayNodeMiddleware` protects your routes by enforcing a stateless USDC payment via the `X-POM-V1` header.
+The `x402_gate` middleware protects your Express routes by enforcing USDC payment verified on-chain.
 
 ```typescript
 import express from 'express';
-import { createPayNodeMiddleware } from '@paynodelabs/sdk-js';
+import { x402_gate } from '@paynodelabs/sdk-js';
 
 const app = express();
 
-// 1. Define the cost and your receiving wallet
-const requirePayment = createPayNodeMiddleware({
-    price: "2.50", // Cost in USDC
-    merchantWallet: "0xYourWalletAddress...",
-    rpcUrl: process.env.BASE_RPC_URL || "https://mainnet.base.org"
+app.get('/api/ai-inference', x402_gate({
+  rpcUrls: ['https://mainnet.base.org'],
+  chainId: 8453,
+  contractAddress: '0xA88B5eaD188De39c015AC51F45E1B41D3d95f2bb',
+  merchantAddress: '0xYourWallet...',
+  tokenAddress: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',  // USDC
+  currency: 'USDC',
+  price: '2.50',
+  decimals: 6,
+}), (req, res) => {
+  // This code ONLY runs after verified on-chain payment
+  res.json({
+    result: 'The meaning of life is 42.',
+    receipt: req.paynode.receiptHash,
+    orderId: req.paynode.orderId,
+  });
 });
 
-// 2. Protect the route
-app.get('/api/ai-inference', requirePayment, (req, res) => {
-    // This code ONLY runs if a valid, un-replayed TxHash was provided
-    res.json({
-        result: "The meaning of life is 42.",
-        paid: true
-    });
-});
-
-app.listen(3000, () => console.log('Merchant Server running on port 3000'));
+app.listen(3000);
 ```
+
+### Middleware Headers
+
+When a request lacks the `x-paynode-receipt` header, the middleware returns `402` with these response headers:
+
+| Header | Description |
+| :--- | :--- |
+| `x-paynode-contract` | Router contract address |
+| `x-paynode-merchant` | Merchant wallet address |
+| `x-paynode-amount` | Required amount (smallest unit) |
+| `x-paynode-currency` | Token symbol (e.g. `USDC`) |
+| `x-paynode-token-address` | ERC20 token address |
+| `x-paynode-chain-id` | Chain ID (e.g. `8453`) |
+| `x-paynode-order-id` | Generated order ID |
+
+---
+
+## 🛡️ Token Whitelist
+
+The Verifier includes a built-in token whitelist to prevent fake-token attacks. By default, it accepts:
+
+| Chain | Tokens |
+| :--- | :--- |
+| Base Mainnet (8453) | USDC `0x8335...` + USDT `0xfde4...` |
+| Base Sepolia (84532) | USDC `0xeAC1...` |
+
+### Customization
+
+```typescript
+import { PayNodeVerifier, ACCEPTED_TOKENS } from '@paynodelabs/sdk-js';
+
+// Use chain default (auto-detected from chainId)
+const verifier = new PayNodeVerifier({
+  rpcUrls: ['https://mainnet.base.org'],
+  chainId: 8453,
+  // acceptedTokens is auto-loaded from ACCEPTED_TOKENS[8453]
+});
+
+// Custom whitelist (e.g. only accept DAI)
+const verifier = new PayNodeVerifier({
+  rpcUrls: ['https://mainnet.base.org'],
+  chainId: 8453,
+  acceptedTokens: ['0x50c5725949A6F0c72E6C4a641F24049A917DB0Cb']  // DAI on Base
+});
+
+// Explicitly disable whitelist (testing only)
+const verifier = new PayNodeVerifier({
+  rpcUrls: ['http://localhost:8545'],
+  acceptedTokens: []  // No whitelist check
+});
+```
+
+---
+
+## 🔒 Production: Redis Idempotency
+
+For production multi-instance deployments, use `RedisIdempotencyStore` instead of the default in-memory store:
+
+```typescript
+import Redis from 'ioredis';
+import { x402_gate, RedisIdempotencyStore } from '@paynodelabs/sdk-js';
+
+const redis = new Redis(process.env.REDIS_URL);
+
+app.get('/api/data', x402_gate({
+  // ...other options
+  store: new RedisIdempotencyStore(redis, 'paynode:tx:'),
+}), handler);
+```
+
+---
+
+## 📡 Webhook Notifications
+
+See the dedicated [Webhooks](/webhooks) page for setup instructions.

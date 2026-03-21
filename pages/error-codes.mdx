@@ -1,0 +1,55 @@
+# 🚨 Error Codes Dictionary
+
+Stuck? Read this first. This page lists every error you may encounter, with causes and solutions.
+
+---
+
+## Client / SDK Errors
+
+| Error Code | SDK | Common Cause | Solution |
+| :--- | :--- | :--- | :--- |
+| `INSUFFICIENT_FUNDS` | JS / PY | Wallet lacks USDC or ETH for gas | Fund your wallet via [testnet faucet](/contracts) or ensure mainnet balance |
+| `TOKEN_NOT_ACCEPTED` | JS / PY | Token address is not in the SDK whitelist | Verify you're using a supported token (USDC/USDT). See [Token Whitelist](/sdk-js#token-whitelist) |
+| `PERMIT_FAILED` | PY | `payWithPermit()` reverted on-chain | Check: (1) deadline not expired, (2) nonce matches, (3) signer matches payer |
+| `Gas_Underpriced` | JS / PY | Base L2 congestion causing gas estimate too low | SDKs include gas boost. If persists, retry or increase `gasMultiplier` |
+| `Unapproved_Token` | JS / PY | Router not approved to spend token | SDKs call `approve()` automatically. For manual calls, run `USDC.approve(Router, MAX_UINT)` |
+
+## Server / Merchant Errors
+
+| Error Code | HTTP | Common Cause | Solution |
+| :--- | :--- | :--- | :--- |
+| `MISSING_RECEIPT` | `402` | Request lacks `x-paynode-receipt` header | Ensure client uses PayNode SDK or manually injects the header |
+| `INVALID_RECEIPT` | `403` | TxHash format invalid or transaction doesn't exist on-chain | (1) Check if tx is still pending (2) Verify RPC node is synced (3) Check network match (mainnet vs sepolia) |
+| `RECEIPT_ALREADY_USED` | `403` | TxHash already consumed (replay attack blocked) | Each txHash is valid for exactly one request. Do not reuse. |
+| `TRANSACTION_NOT_FOUND` | `403` | TxHash returns null receipt from RPC | Transaction may not be mined yet. Wait and retry, or check if it was dropped. |
+| `TRANSACTION_FAILED` | `403` | Transaction reverted on-chain (status = 0) | Check Basescan for revert reason. Common: insufficient allowance or balance. |
+| `WRONG_CONTRACT` | `403` | Transaction was sent to wrong contract | Verify the `x-paynode-contract` header matches the Router address in the SDK config. |
+| `WRONG_MERCHANT` | `403` | Payment went to a different merchant | Verify `merchantAddress` in SDK config matches the one used by the Agent. |
+| `WRONG_TOKEN` | `403` | Payment used unexpected token | Check that Agent and Merchant are configured for the same token. |
+| `ORDER_MISMATCH` | `403` | Order ID in receipt doesn't match expected | Internal SDK consistency check. Usually indicates a replay or cross-request leak. |
+
+## Network & RPC
+
+| Error Signature | Common Cause | Solution |
+| :--- | :--- | :--- |
+| `RPC Rate Limit (429)` | Free public RPC is being rate-limited | Use a private RPC (Alchemy, Infura, QuickNode) in production |
+| `RPC_ERROR` | RPC node unreachable or returned unexpected response | Check node health. JS SDK supports `FallbackProvider` with multiple RPCs |
+| `INTERNAL_ERROR` | Unexpected error in SDK code | Report to PayNode team with full error details |
+
+## Webhook Errors
+
+| Situation | Behavior |
+| :--- | :--- |
+| Webhook endpoint returns `4xx`/`5xx` | Auto-retry with exponential backoff (2s, 4s, 8s) |
+| Webhook endpoint unreachable | Same retry policy. After 3 attempts, `onError` callback is invoked |
+| HMAC signature mismatch | Your endpoint should return `401`. Check that `WEBHOOK_SECRET` matches on both sides |
+
+---
+
+## Quick Debugging Checklist
+
+1. **"402 but Agent won't pay"** — Check Agent wallet has ETH (gas) + USDC on the correct network
+2. **"403 INVALID_RECEIPT"** — Are both sides on the same network? (mainnet vs sepolia)
+3. **"TOKEN_NOT_ACCEPTED"** — Are you using a custom token? Add it to `acceptedTokens` config
+4. **"RECEIPT_ALREADY_USED"** — Each payment can only unlock one request. Generate a new payment.
+5. **"Nonce too low"** — In Python, ensure you're using a single `PayNodeAgentClient` instance (thread-safe)

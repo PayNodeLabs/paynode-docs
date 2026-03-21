@@ -1,6 +1,6 @@
 # The x402 Protocol
 
-The core of PayNode is an extension of the original (but rarely used) HTTP `402 Payment Required` status code. We call this implementation **x402**.
+The core of PayNode is an extension of the HTTP `402 Payment Required` status code. We call this implementation **x402**.
 
 The protocol defines a standardized handshake between a **Merchant Server** (API provider) and an **AI Agent** (Client).
 
@@ -8,47 +8,92 @@ The protocol defines a standardized handshake between a **Merchant Server** (API
 
 ## 🤝 The Handshake Flow
 
-### 1. The Challenge (Server → Agent)
-When an Agent requests a protected resource without prior payment, the server responds with an HTTP `402`. Crucially, it must include specific headers to tell the Agent *how much* to pay and *where* to pay.
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Agent as 🤖 AI Agent (Client)
+    participant Server as 🏪 Merchant Server
+    participant Base as ⛓️ Base L2 (Router)
 
-**Response Headers:**
+    Agent->>Server: GET /premium-data
+    Server-->>Agent: 402 Payment Required + pricing headers
+    
+    Note over Agent,Base: SDK handles payment autonomously
+    Agent->>Base: USDC.approve(Router, ∞) [first time only]
+    Agent->>Base: Router.pay(USDC, merchant, amount, orderId)
+    Base-->>Agent: PaymentReceived event → txHash
+    
+    Agent->>Server: GET /premium-data + x-paynode-receipt: txHash
+    
+    Note over Server,Base: Stateless On-Chain Verification
+    Server->>Base: getTransactionReceipt(txHash)
+    Base-->>Server: Receipt: status=1, logs=[PaymentReceived]
+    
+    Server-->>Agent: 200 OK → data served ✅
+```
+
+### 1. The Challenge (Server → Agent)
+
+When an Agent requests a protected resource without prior payment, the server responds with HTTP `402` and includes pricing metadata in headers:
+
 ```http
 HTTP/1.1 402 Payment Required
-PayNode-Router-Address: 0xA88B5eaD188De39c015AC51F45E1B41D3d95f2bb
-PayNode-Amount: 1.50
-PayNode-Currency: USDC
-PayNode-Merchant-Address: 0xMerchantWallet...
+x-paynode-contract: 0xA88B5eaD188De39c015AC51F45E1B41D3d95f2bb
+x-paynode-merchant: 0xMerchantWallet...
+x-paynode-amount: 1000000
+x-paynode-currency: USDC
+x-paynode-token-address: 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
+x-paynode-chain-id: 8453
+x-paynode-order-id: agent_js_1716000000
 ```
 
 ### 2. The Execution (Agent On-Chain)
-The Agent intercepts the `402` response, reads the headers, and initiates an on-chain transaction on **Base L2**.
-The Agent calls the `processPayment` function on the PayNode Router contract, passing the `PayNode-Amount` and the `PayNode-Merchant-Address`.
 
-*Note: The PayNode SDKs handle this step automatically, including infinite approvals and gas optimizations.*
+The SDK intercepts the `402`, reads the headers, and:
+1. Checks balance and allowance
+2. Calls `Router.pay(token, merchant, amount, orderId)` on Base L2
+3. Waits for confirmation (~2 seconds)
 
-### 3. The Proof of Management (Agent → Server)
-Once the transaction is mined, the Agent receives a Transaction Hash (TxHash). This acts as a cryptographically verifiable **Proof of Management (POM)**.
-The Agent retries the original HTTP request, this time attaching the POM in the headers.
+> **Alternative**: Use `payWithPermit()` for single-transaction payments without prior `approve()`.
 
-**Request Headers:**
+### 3. The Proof (Agent → Server)
+
+Once mined, the Agent retries the original request with the transaction hash:
+
 ```http
 GET /premium-data HTTP/1.1
-X-POM-V1: 0x7249d5255d916c9bd0c2eed128e850d1950d76f571c576048f6cd03c8c2e83da
+x-paynode-receipt: 0x7249d5255d916c9bd0c2eed128e850d1950d76f571c576048f6cd03c8c2e83da
+x-paynode-order-id: agent_js_1716000000
 ```
 
 ### 4. Stateless Verification (Server)
-The Merchant's middleware intercepts the request, extracts the `X-POM-V1` hash, and queries the Base L2 RPC to verify:
-1. Does the TxHash exist?
-2. Did it call the official PayNode Router?
-3. Was the `Merchant-Address` correct?
-4. Was the transferred `USDC` amount $\ge$ `PayNode-Amount`?
-5. Has this TxHash been used before? (Replay Protection)
 
-If all checks pass, the server serves the data. No database `orders` table is required.
+The merchant's `PayNodeVerifier` (built into the middleware) queries the chain:
+
+1. ✅ Does the txHash exist and is status `1`?
+2. ✅ Did it target the official PayNode Router contract?
+3. ✅ Was the correct merchant address in the `PaymentReceived` event?
+4. ✅ Was the amount ≥ required price?
+5. ✅ Is the token in the [accepted whitelist](/sdk-js#token-whitelist)?
+6. ✅ Is the chainId correct? (cross-chain replay protection)
+7. ✅ Has this txHash been used before? (idempotency check)
+
+If all checks pass → `200 OK`. No database needed.
 
 ---
 
 ## 🛡️ Security Considerations
 
-* **Replay Attacks:** Merchants MUST implement an LRU cache or Redis store to remember recently verified `X-POM-V1` hashes. A hash should only be valid for a single request (or a defined time window).
-* **RPC Reliability:** Merchants should use dedicated RPC nodes (e.g., Alchemy, Infura) for verifying transactions to prevent rate-limiting during high traffic.
+### Replay Attacks
+The SDK includes `IdempotencyStore` (in-memory or Redis) to track consumed txHashes. A hash is only valid once within a configurable TTL (default: 24 hours).
+
+### Fake Token Attacks
+The `PayNodeVerifier` includes a built-in [Token Whitelist](/sdk-js#token-whitelist) that rejects non-approved ERC20 addresses — preventing attackers from deploying fake USDC contracts.
+
+### Cross-Chain Replay
+The `PaymentReceived` event includes `chainId`. The Verifier checks that the chainId matches the expected network.
+
+### RPC Reliability
+- **JS SDK**: Supports `FallbackProvider` with multiple RPC URLs for automatic failover
+- **Python SDK**: Configurable timeout and retry strategies
+- **Production**: Always use private RPCs (Alchemy, Infura) — public RPCs rate-limit heavily
