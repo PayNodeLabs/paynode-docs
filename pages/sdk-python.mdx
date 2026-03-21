@@ -46,7 +46,7 @@ For gasless single-transaction payments using an offline signature:
 ```python
 # Payer signs offline, Agent relays on-chain
 tx_hash = agent.pay_with_permit(
-    router_addr="0xA88B5eaD188De39c015AC51F45E1B41D3d95f2bb",
+    router_addr="0x92e20164FC457a2aC35f53D06268168e6352b200",
     payer_address="0xPayerWallet...",
     token_addr="0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
     merchant_addr="0xMerchantWallet...",
@@ -74,7 +74,7 @@ app = FastAPI()
 app.add_middleware(
     PayNodeMiddleware,
     rpc_url=os.getenv("BASE_RPC_URL", "https://mainnet.base.org"),
-    contract_address="0xA88B5eaD188De39c015AC51F45E1B41D3d95f2bb",
+    contract_address="0x92e20164FC457a2aC35f53D06268168e6352b200",
     merchant_address="0xYourWallet...",
     chain_id=8453,
     currency="USDC",
@@ -106,7 +106,7 @@ from paynode_sdk.constants import ACCEPTED_TOKENS
 # Auto-detect from chainId (recommended)
 verifier = PayNodeVerifier(
     rpc_url="https://mainnet.base.org",
-    contract_address="0xA88B...",
+    contract_address="0x92e2...",
     chain_id=8453,
     # Automatically uses ACCEPTED_TOKENS[8453] = [USDC, USDT]
 )
@@ -114,7 +114,7 @@ verifier = PayNodeVerifier(
 # Override with custom list
 verifier = PayNodeVerifier(
     rpc_url="https://mainnet.base.org",
-    contract_address="0xA88B...",
+    contract_address="0x92e2...",
     chain_id=8453,
     accepted_tokens=["0xCustomToken..."],
 )
