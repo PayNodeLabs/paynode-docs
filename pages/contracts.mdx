@@ -32,6 +32,13 @@ PayNode's contracts are minimal, immutable, and fully verified on Basescan. The 
 | **PayNode Router** | `0xB587Bc36aaCf65962eCd6Ba59e2DA76f2f575408` |
 | **Mock USDC** | `0xeAC1f2C7099CdaFfB91Aa3b8Ffd653Ef16935798` |
 
+#### 🚰 How to get Testnet USDC?
+1.  Open the **[MockUSDC Basescan Page](https://sepolia.basescan.org/address/0xeAC1f2C7099CdaFfB91Aa3b8Ffd653Ef16935798#writeContract)**.
+2.  Click the **"Contract"** tab -> **"Write Contract"** button.
+3.  Click **"Connect to Web3"** and link your wallet.
+4.  Expand function **`3. mint`**.
+5.  Enter your `address` and `1000000000` (for 1,000 USDC). Click **Write**.
+
 ---
 
 ## 📄 Core ABI
@@ -91,6 +98,47 @@ event PaymentReceived(
 | **Custom Errors** | `InvalidAddress()`, `AmountMustBeGreaterThanZero()` — saves gas vs string requires |
 | **Deterministic Deploy** | `CREATE2` ensures same address across all EVM chains |
 | **ChainId in Events** | Prevents cross-chain replay attacks |
+
+---
+
+## 🚰 Faucet & Test Tokens (Sandbox)
+
+To test PayNode on **Base Sepolia**, you need mock USDC. Our test token includes a public `mint` function for easy onboarding.
+
+### Option 1: Manual Mint via Basescan
+
+1.  Visit the **[MockUSDC Contract on Basescan](https://sepolia.basescan.org/address/0xeAC1f2C7099CdaFfB91Aa3b8Ffd653Ef16935798#writeContract)**.
+2.  Connect your wallet (MetaMask/Coinbase Wallet).
+3.  Go to **Write Contract** -> **`mint`**.
+4.  Enter your address and an amount (e.g., `1000000000` for 1,000 USDC — remember it has 6 decimals).
+5.  Click **Write** and confirm the transaction.
+
+### Option 2: Programmatic Mint (Python SDK)
+
+Agents can "self-fund" their testing wallets:
+
+```python
+from paynode_sdk import PayNodeAgentClient
+from web3 import Web3
+
+# Initialize with private key
+client = PayNodeAgentClient("YOUR_PRIVATE_KEY", ["https://sepolia.base.org"])
+
+# Mock USDC ABI (minimal)
+usdc_abi = [{"inputs": [{"name": "to", "type": "address"}, {"name": "amount", "type": "uint256"}], "name": "mint", "outputs": [], "stateMutability": "nonpayable", "type": "function"}]
+usdc = client.w3.eth.contract(address="0xeAC1f2C7099CdaFfB91Aa3b8Ffd653Ef16935798", abi=usdc_abi)
+
+# Mint 1,000 USDC
+tx = usdc.functions.mint(client.account.address, 1000 * 10**6).build_transaction({
+    'from': client.account.address,
+    'nonce': client.w3.eth.get_transaction_count(client.account.address),
+    'gas': 100000,
+    'gasPrice': int(client.w3.eth.gas_price * 1.2)
+})
+signed_tx = client.account.sign_transaction(tx)
+client.w3.eth.send_raw_transaction(signed_tx.raw_transaction)
+print("💰 Test USDC Minted!")
+```
 
 ---
 
