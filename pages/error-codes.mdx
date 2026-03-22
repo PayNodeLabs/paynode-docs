@@ -9,7 +9,7 @@ Stuck? Read this first. This page lists every error you may encounter, with caus
 | Error Code | SDK | Common Cause | Solution |
 | :--- | :--- | :--- | :--- |
 | `INSUFFICIENT_FUNDS` | JS / PY | Wallet lacks USDC or ETH for gas | Fund your wallet via [testnet faucet](/contracts) or ensure mainnet balance |
-| `TOKEN_NOT_ACCEPTED` | JS / PY | Token address is not in the SDK whitelist | Verify you're using a supported token (USDC/USDT). See [Token Whitelist](/sdk-js#token-whitelist) |
+| `TOKEN_NOT_ACCEPTED` | JS / PY | Token address is not in the SDK whitelist | Verify you're using the official USDC address. See [Token Whitelist](/sdk-js#token-whitelist) |
 | `PERMIT_FAILED` | PY | `payWithPermit()` reverted on-chain | Check: (1) deadline not expired, (2) nonce matches, (3) signer matches payer |
 | `Gas_Underpriced` | JS / PY | Base L2 congestion causing gas estimate too low | SDKs include gas boost. If persists, retry or increase `gasMultiplier` |
 | `Unapproved_Token` | JS / PY | Router not approved to spend token | SDKs call `approve()` automatically. For manual calls, run `USDC.approve(Router, MAX_UINT)` |
