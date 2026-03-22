@@ -63,6 +63,10 @@ tx_hash = agent.pay_with_permit(
 
 ---
 
+
+### Security: Permit Authorization Warning
+> **⚠️ Security Warning:** An Agent's EIP-2612 offline signature (Permit) is equivalent to granting a smart contract direct deduction privileges. When building autonomous execution loops, you must strictly limit the signed `amount` at the application layer. Never grant `MAX_INT` authorization or authorize unknown addresses, to prevent malicious draining of the Agent's fund pool.
+
 ## 🏪 For Merchants (FastAPI Middleware)
 
 `PayNodeMiddleware` integrates into FastAPI as ASGI middleware.
@@ -133,7 +137,7 @@ verifier = PayNodeVerifier(
 
 # Override with custom list
 verifier = PayNodeVerifier(
-    rpc_url="https://mainnet.base.org",
+    rpc_urls=["https://mainnet.base.org"],
     contract_address="0x92e2...",
     chain_id=8453,
     accepted_tokens=["0xCustomToken..."],
@@ -141,7 +145,7 @@ verifier = PayNodeVerifier(
 
 # Disable whitelist (testing only)
 verifier = PayNodeVerifier(
-    rpc_url="http://localhost:8545",
+    rpc_urls=["http://localhost:8545"],
     contract_address="0x1234...",
     chain_id=8453,
     accepted_tokens=[]  # Empty = no whitelist check
