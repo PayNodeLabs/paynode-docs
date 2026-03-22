@@ -49,15 +49,13 @@ For gasless single-transaction payments using an offline signature:
 
 ```python
 # Payer signs offline, Agent relays on-chain
-tx_hash = agent.pay_with_permit(
+tx_hash = agent.pay_with_permit_auto(
     router_addr="0x92e20164FC457a2aC35f53D06268168e6352b200",
     payer_address="0xPayerWallet...",
     token_addr="0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
     merchant_addr="0xMerchantWallet...",
     amount=1000000,         # 1 USDC (6 decimals)
-    order_id="order_123",
-    deadline=1716000000,    # Unix timestamp
-    v=28, r=b'\x...', s=b'\x...'
+    order_id="order_123"
 )
 ```
 
