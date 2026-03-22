@@ -26,8 +26,12 @@ import os
 from paynode_sdk import PayNodeAgentClient
 
 agent = PayNodeAgentClient(
-    rpc_urls=["https://mainnet.base.org"],
-    private_key=os.getenv("AGENT_PRIVATE_KEY")
+    private_key=os.getenv("AGENT_PRIVATE_KEY"),
+    rpc_urls=[
+        "https://mainnet.base.org",
+        "https://base.meowrpc.com",
+        "https://1rpc.io/base"
+    ]
 )
 
 # Standard requests — 402 payment is handled autonomously
@@ -64,7 +68,7 @@ tx_hash = agent.pay_with_permit(
 `PayNodeMiddleware` integrates into FastAPI as ASGI middleware.
 
 ```python
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from paynode_sdk import PayNodeMiddleware
 import os
 
@@ -73,7 +77,7 @@ app = FastAPI()
 # Add PayNode payment gate as middleware
 app.add_middleware(
     PayNodeMiddleware,
-    rpc_url=os.getenv("BASE_RPC_URL", "https://mainnet.base.org"),
+    rpc_urls=[os.getenv("BASE_RPC_URL", "https://mainnet.base.org")],
     contract_address="0x92e20164FC457a2aC35f53D06268168e6352b200",
     merchant_address="0xYourWallet...",
     chain_id=8453,
@@ -84,9 +88,25 @@ app.add_middleware(
 )
 
 @app.get("/api/inference")
-def inference():
-    # This ONLY runs after verified on-chain payment
-    return {"result": "AI inference output", "paid": True}
+def inference(request: Request):
+    """
+    If this route is reached, it means the middleware has already
+    verified the on-chain payment.
+    """
+    receipt = request.headers.get('x-paynode-receipt')
+    order_id = request.headers.get('x-paynode-order-id')
+
+    return {
+        "status": "success",
+        "data": {
+            "result": "AI inference output",
+            "paid": True
+        },
+        "payment_info": {
+            "receipt": receipt,
+            "order_id": order_id
+        }
+    }
 ```
 
 ### 402 Response Headers
@@ -101,12 +121,12 @@ The Verifier includes a built-in `ACCEPTED_TOKENS` whitelist per chain to block 
 
 ```python
 from paynode_sdk import PayNodeVerifier
-from paynode_sdk.constants import ACCEPTED_TOKENS
+from paynode_sdk.constants import ACCEPTED_TOKENS, BASE_RPC_URLS
 
 # Auto-detect from chainId (recommended)
 verifier = PayNodeVerifier(
-    rpc_url="https://mainnet.base.org",
-    contract_address="0x92e2...",
+    rpc_urls=BASE_RPC_URLS,
+    contract_address="0x92e20164FC457a2aC35f53D06268168e6352b200",
     chain_id=8453,
     # Automatically uses ACCEPTED_TOKENS[8453] = [USDC]
 )
@@ -136,19 +156,38 @@ The Python SDK uses `threading.Lock()` for atomic nonce management. When multipl
 
 ```python
 # Safe for multi-threaded usage
-import threading
-
-def tool_call(agent, url):
-    response = agent.get(url)  # Thread-safe nonce handling
-    return response.json()
-
-threads = [
-    threading.Thread(target=tool_call, args=(agent, url))
-    for url in paid_api_urls
-]
-for t in threads:
-    t.start()
+# ... usage example remains same
 ```
+
+---
+
+## 🚀 Interactive Demo
+
+Join the PayNode developer test loop using the `packages/sdk-python/examples/` suite.
+
+### 1. Configuration (`.env`)
+
+The demo uses `python-dotenv` to load settings. Create an `.env` file:
+
+```env
+AGENT_PRIVATE_KEY=your_private_key
+MERCHANT_ADDRESS=your_wallet_address
+PAYNODE_RPC_URL=https://sepolia.base.org
+# Default Router (Base Sepolia)
+PAYNODE_CONTRACT_ADDRESS=0xB587Bc36aaCf65962eCd6Ba59e2DA76f2f575408
+```
+
+### 2. Run the Suite
+
+```bash
+# Start Merchant Server
+python packages/sdk-python/examples/fastapi_server.py
+
+# Run Agent Workspace
+python packages/sdk-python/examples/agent_client.py
+```
+
+Check the console to see the real-time **Base Sepolia transaction verification** logs.
 
 ---
 
