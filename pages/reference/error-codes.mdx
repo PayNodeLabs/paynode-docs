@@ -8,8 +8,8 @@ Stuck? Read this first. This page lists every error you may encounter, with caus
 
 | Error Code | SDK | Common Cause | Solution |
 | :--- | :--- | :--- | :--- |
-| `insufficient_funds` | JS / PY | Wallet lacks USDC or ETH for gas | Fund your wallet via [testnet faucet](/contracts) or ensure mainnet balance |
-| `token_not_accepted` | JS / PY | Token address is not in the SDK whitelist | Verify you're using the official USDC address. See [Token Whitelist](/sdk-js#token-whitelist) |
+| `insufficient_funds` | JS / PY | Wallet lacks USDC or ETH for gas | Fund your wallet via [testnet faucet](/reference) or ensure mainnet balance |
+| `token_not_accepted` | JS / PY | Token address is not in the SDK whitelist | Verify you're using the official USDC address. See [Token Whitelist](/integration#token-whitelist) |
 | `amount_too_low` | JS / PY | Payment is below 1000 (0.001 USDC) | Protocol minimum is 1000 to prevent dust exploits. Increase payment amount. |
 | `rpc_error` | JS / PY | Failed to connect to any provided RPC nodes | Check your RPC URLs or network connectivity. |
 | `internal_error` | JS / PY | An unexpected error in the SDK | Report to the PayNode team with stack trace. |

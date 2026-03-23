@@ -8,7 +8,7 @@ When an AI Agent hits an API that requires payment, it gets stuck. PayNode solve
 
 | | Traditional Gateways (Stripe) | **PayNode** |
 | :--- | :--- | :--- |
-| **Integration** | Days of database setup, webhook endpoints, settlement reconciliation | 5-minute SDK drop-in. No database needed. |
+| **Integration** | Days of database setup, webhook endpoints, settlement reconciliation | 1-minute SDK drop-in. No database needed. |
 | **Verification** | Asynchronous callbacks, webhook retries, database `orders` tables | Stateless: verify a txHash on-chain like verifying a JWT |
 | **Settlement** | T+7 or T+2 delays, frozen assets risk | Instant. Atomic 99/1 split — funds arrive in merchant wallet within 2 seconds |
 | **Agent-Native** | Requires UI, manual card input | Zero UI. HTTPS-native silent autonomous payments |
@@ -16,13 +16,14 @@ When an AI Agent hits an API that requires payment, it gets stuck. PayNode solve
 
 ## 📚 Documentation
 
-1. **[⚡ Quickstart (5 min)](/quickstart)** — Build a merchant server + agent client from scratch. Run locally, verify on Basescan.
-2. **[Protocol (x402)](/protocol)** — How the `402` handshake works, with sequence diagrams and security analysis.
-3. **[JavaScript SDK](/sdk-js)** — Agent client, Express middleware, Permit payments, Token whitelist.
-4. **[Python SDK](/sdk-python)** — Agent client, FastAPI middleware, thread-safe nonce management.
-5. **[Smart Contracts](/contracts)** — Mainnet/Testnet addresses, RPCs, ABI reference, security features.
-6. **[Webhooks](/webhooks)** — Real-time payment notifications with HMAC-SHA256 verification.
-7. **[🚨 Error Codes](/error-codes)** — Troubleshoot any error from SDK, server, or RPC.
+1. **[⚡ Quickstart (1 min)](/quickstart)** — Build a merchant server + agent client from scratch. Run locally, verify on Basescan.
+2. **[📑 Protocol (x402)](/concepts)** — How the `402` handshake works, with sequence diagrams and security analysis.
+3. **[🏗️ Architecture](/concepts/architecture)** — System design and M2M payment flow overview.
+4. **[🟨 JavaScript SDK](/integration)** — Agent client, Express middleware, Permit payments, Token whitelist.
+5. **[🟦 Python SDK](/integration/sdk-python)** — Agent client, FastAPI middleware, thread-safe nonce management.
+6. **[🔗 Webhooks](/integration/webhooks)** — Real-time payment notifications with HMAC-SHA256 verification.
+7. **[📜 Smart Contracts](/reference)** — Mainnet/Testnet addresses, RPCs, ABI reference, security features.
+8. **[🚨 Error Codes](/reference/error-codes)** — Troubleshoot any error from SDK, server, or RPC.
 
 ## 🚀 The Vision
 
@@ -30,4 +31,4 @@ We believe in a Sovereign AI Future where machines frictionlessly transact with 
 
 ---
 
-> **Quick Links**: [GitHub](https://github.com/paynodelabs) · [Basescan Router](https://basescan.org/address/0x92e20164FC457a2aC35f53D06268168e6352b200) · [Base Sepolia Explorer](https://sepolia.basescan.org)
+> **Quick Links**: [GitHub](https://github.com/paynodelabs) · [Basescan Router](https://basescan.org/address/0x4A73696ccF76E7381b044cB95127B3784369Ed63) · [Base Sepolia Explorer](https://sepolia.basescan.org)

@@ -31,7 +31,7 @@ import { PayNodeWebhookNotifier } from '@paynodelabs/sdk-js';
 
 const notifier = new PayNodeWebhookNotifier({
   rpcUrl: 'https://mainnet.base.org',
-  contractAddress: '0x92e20164FC457a2aC35f53D06268168e6352b200',
+  contractAddress: '0x4A73696ccF76E7381b044cB95127B3784369Ed63',
   webhookUrl: 'https://your-server.com/api/paynode-webhook',
   webhookSecret: process.env.WEBHOOK_SECRET,  // For HMAC signature
   chainId: 8453,
@@ -54,7 +54,7 @@ from paynode_sdk import PayNodeWebhookNotifier
 
 notifier = PayNodeWebhookNotifier(
     rpc_url="https://mainnet.base.org",
-    contract_address="0x92e20164FC457a2aC35f53D06268168e6352b200",
+    contract_address="0x4A73696ccF76E7381b044cB95127B3784369Ed63",
     webhook_url="https://your-server.com/api/paynode-webhook",
     webhook_secret=os.getenv("WEBHOOK_SECRET"),
     chain_id=8453,

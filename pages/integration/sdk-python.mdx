@@ -1,0 +1,152 @@
+# Python SDK (`paynode-sdk-python`)
+
+import { Tabs } from 'nextra/components'
+
+<Tabs items={['Usage', 'API Reference']}>
+  <Tabs.Tab>
+    ## 🤖 For AI Agents (Client)
+
+    The `PayNodeAgentClient` defaults to **Base Mainnet** RPCs.
+
+    ```python
+    import os
+    from paynode_sdk import PayNodeAgentClient
+
+    # Minimalist: only private key required for Mainnet
+    agent = PayNodeAgentClient(private_key=os.getenv("AGENT_PRIVATE_KEY"))
+
+    # Or specify custom RPCs
+    agent_custom = PayNodeAgentClient(
+        private_key=os.getenv("AGENT_PRIVATE_KEY"),
+        rpc_urls=["https://base-sepolia.g.alchemy.com/v2/..."]
+    )
+
+    # Simple GET/POST helpers
+    response = agent.get("https://api.merchant.com/data")
+    print(response.json())
+    ```
+
+    ## 🏪 For Merchants (FastAPI)
+
+    Defaults to **USDC on Base Mainnet**.
+
+    ```python
+    from fastapi import FastAPI
+    from paynode_sdk import PayNodeMiddleware
+
+    app = FastAPI()
+    
+    # Minimalist for Mainnet
+    app.add_middleware(
+        PayNodeMiddleware,
+        merchant_address="0xYourWallet...",
+        price="1.00", # 1.00 USDC
+    )
+    ```
+  </Tabs.Tab>
+  <Tabs.Tab>
+    ## `PayNodeMiddleware`
+
+    | Parameter | Type | Required | Default | Description |
+    | :--- | :--- | :--- | :--- | :--- |
+    | `merchant_address` | `str` | **Yes** | - | Receiving wallet address. |
+    | `price` | `str` | **Yes** | - | Human-readable price (e.g. "0.50"). |
+    | `rpc_urls` | `list \| str` | No | Base Mainnet | RPC endpoints. |
+    | `contract_address` | `str` | No | `0x4A73...` | PayNode Router address. |
+    | `chain_id` | `int` | No | `8453` | Network chain ID. |
+    | `currency` | `str` | No | `"USDC"` | Token symbol (e.g., "USDC"). |
+    | `token_address` | `str` | No | `0x8335...` | ERC20 token address (USDC). |
+    | `decimals` | `int` | No | `6` | Token decimals (USDC = 6). |
+    | `accepted_tokens` | `list` | No | `[USDC]` | Whitelist for verification. |
+    | `store` | `IdempotencyStore`| No | Memory | Custom store instance. |
+    | `generate_order_id`| `Callable` | No | Auto | Custom order ID generator. |
+
+    ## `PayNodeAgentClient`
+
+    ### `constructor(private_key, rpc_urls)`
+    - `private_key`: `str` (**Required**) - Agent's private key.
+    - `rpc_urls`: `list | str` (Optional) - Defaults to Base Mainnet public RPCs.
+
+    ### `get(url, **kwargs)` / `post(url, **kwargs)`
+    - Proxies to `requests.Session` with autonomous 402 handling.
+  </Tabs.Tab>
+</Tabs>
+
+---
+
+## 🛡️ Token Whitelist
+
+The Verifier includes a built-in `ACCEPTED_TOKENS` whitelist per chain to block fake-token attacks.
+
+| Network | Chain ID | Accepted Token (USDC) |
+| :--- | :--- | :--- |
+| **Base Mainnet** | `8453` | `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` |
+| **Base Sepolia** | `84532` | `0xeAC1f2C7099CdaFfB91Aa3b8Ffd653Ef16935798` (Sandbox) |
+
+### Customization
+
+```python
+from paynode_sdk import PayNodeVerifier
+from paynode_sdk.constants import ACCEPTED_TOKENS, BASE_RPC_URLS
+
+# Auto-detect from chain_id (recommended)
+verifier = PayNodeVerifier(
+    rpc_urls=BASE_RPC_URLS,
+    chain_id=8453,
+    # Automatically uses ACCEPTED_TOKENS[8453]
+)
+
+# Custom whitelist
+verifier = PayNodeVerifier(
+    rpc_urls=["https://mainnet.base.org"],
+    chain_id=8453,
+    accepted_tokens=["0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"],
+)
+
+# Disable whitelist (testing only)
+verifier = PayNodeVerifier(
+    rpc_urls=["http://localhost:8545"],
+    chain_id=8453,
+    accepted_tokens=[]  # Empty = no whitelist check
+)
+```
+
+---
+
+## 🔒 Thread Safety & Concurrency
+
+The Python SDK uses `threading.Lock()` for atomic nonce management. When multiple tools/threads send concurrent transactions, nonces are queued and incremented safely — avoiding `nonce too low` errors.
+
+---
+
+## 🚀 Interactive Demo
+
+Join the PayNode developer test loop using the `packages/sdk-python/examples/` suite.
+
+### 1. Configuration (`.env`)
+
+The demo uses `python-dotenv` to load settings. Create an `.env` file:
+
+```env
+AGENT_PRIVATE_KEY=your_private_key
+MERCHANT_ADDRESS=your_wallet_address
+PAYNODE_RPC_URL=https://sepolia.base.org
+# Default Router (Base Sepolia)
+PAYNODE_CONTRACT_ADDRESS=0x24cD8b68aaC209217ff5a6ef1Bf55a59f2c8Ca6F
+```
+
+### 2. Run the Suite
+
+```bash
+# Start Merchant Server
+python packages/sdk-python/examples/fastapi_server.py
+
+# Run Agent Workspace
+python packages/sdk-python/examples/agent_client.py
+```
+
+---
+
+## 📡 Webhook Notifications
+
+See the dedicated [Webhooks](/integration/webhooks) page for async event-driven payment notifications.

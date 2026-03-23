@@ -1,0 +1,159 @@
+# JavaScript SDK (`@paynodelabs/sdk-js`)
+
+import { Tabs } from 'nextra/components'
+
+The PayNode JavaScript SDK provides a seamless integration for both AI Agents (to pay) and Merchants (to accept payments). It handles the complete x402 lifecycle: intercepting 402 responses, on-chain execution via `ethers`, and stateless verification.
+
+---
+
+<Tabs items={['Usage', 'API Reference']}>
+  <Tabs.Tab>
+    ## 🤖 For AI Agents (Client)
+
+    The `PayNodeAgentClient` intercepts HTTP `402` and handles the payment handshake automatically.
+
+    ```typescript
+    import { PayNodeAgentClient } from '@paynodelabs/sdk-js';
+
+    // Minimalist: Defaults to Base Mainnet RPCs
+    const agent = new PayNodeAgentClient(process.env.AGENT_PRIVATE_KEY);
+
+    // Make an autonomous request
+    const response = await agent.get('https://api.merchant.com/premium-data');
+    console.log(response.data);
+    ```
+
+    ## 🏪 For Merchants (Express)
+
+    The `x402_gate` middleware provides instant protection for your API routes.
+
+    ```typescript
+    import express from 'express';
+    import { x402_gate } from '@paynodelabs/sdk-js';
+
+    const app = express();
+
+    // 2-parameter minimalist initialization (Defaults to Base Mainnet USDC)
+    app.get('/api/protected', x402_gate({
+      merchantAddress: '0xYourWalletAddress',
+      price: '1.00' // 1.00 USDC
+    }), (req, res) => {
+      res.json({ message: 'Success! You paid for this data.' });
+    });
+    ```
+  </Tabs.Tab>
+  <Tabs.Tab>
+    ## `x402_gate` Middleware
+
+    | Parameter | Type | Required | Default | Description |
+    | :--- | :--- | :--- | :--- | :--- |
+    | `merchantAddress` | `string` | **Yes** | - | Receiver's wallet address. |
+    | `price` | `string` | **Yes** | - | Human-readable price (e.g. "0.5"). |
+    | `rpcUrls` | `string[]` | No | Base Mainnet | List of RPC endpoints for verification. |
+    | `contractAddress` | `string` | No | `0x4A73...` | PayNode Router address. |
+    | `chainId` | `number` | No | `8453` | Target chain (Base = 8453). |
+    | `currency` | `string` | No | `"USDC"` | Token symbol for headers. |
+    | `tokenAddress` | `string` | No | `0x8335...` | ERC20 token address (USDC). |
+    | `decimals` | `number` | No | `6` | Token decimals (USDC = 6). |
+    | `acceptedTokens` | `string[]`| No | [USDC] | Whitelist for verification. |
+
+    ## `PayNodeAgentClient`
+
+    ### `constructor(privateKey, rpcUrls?)`
+    - `privateKey`: `string` (**Required**) - The payer's wallet private key.
+    - `rpcUrls`: `string[]` (Optional) - Defaults to Base Mainnet public RPCs.
+
+    ### `get(url, config?)` / `post(url, data?, config?)`
+    - Standard `axios` interface. Automatically handles 402 handshake.
+  </Tabs.Tab>
+</Tabs>
+
+---
+
+## 🛡️ Token Whitelist
+
+The Verifier includes a built-in token whitelist to prevent fake-token attacks. By default, it accepts:
+
+| Network | Chain ID | Accepted Token (USDC) |
+| :--- | :--- | :--- |
+| **Base Mainnet** | `8453` | `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` |
+| **Base Sepolia** | `84532` | `0xeAC1f2C7099CdaFfB91Aa3b8Ffd653Ef16935798` (Sandbox) |
+
+### Customization
+
+```typescript
+import { PayNodeVerifier, ACCEPTED_TOKENS } from '@paynodelabs/sdk-js';
+
+// Use chain default (auto-detected from chainId)
+const verifier = new PayNodeVerifier({
+  rpcUrls: ['https://mainnet.base.org'],
+  chainId: 8453,
+  // acceptedTokens is auto-loaded from ACCEPTED_TOKENS[8453]
+});
+
+// Custom whitelist (e.g. only accept DAI)
+const verifier = new PayNodeVerifier({
+  rpcUrls: ['https://mainnet.base.org'],
+  chainId: 8453,
+  acceptedTokens: ['0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913']  // USDC on Base
+});
+
+// Explicitly disable whitelist (testing only)
+const verifier = new PayNodeVerifier({
+  rpcUrls: ['http://localhost:8545'],
+  acceptedTokens: []  // No whitelist check
+});
+```
+
+---
+
+## 🔒 Production: Redis Idempotency
+
+For production multi-instance deployments, use `RedisIdempotencyStore` instead of the default in-memory store:
+
+```typescript
+import Redis from 'ioredis';
+import { x402_gate, RedisIdempotencyStore } from '@paynodelabs/sdk-js';
+
+const redis = new Redis(process.env.REDIS_URL);
+
+app.get('/api/data', x402_gate({
+  // ...other options
+  store: new RedisIdempotencyStore(redis, 'paynode:tx:'),
+}), handler);
+```
+
+---
+
+## 🚀 Interactive Demo
+
+The source repository contains a ready-to-use demo suite in `packages/sdk-js/examples/`. This is the fastest way to test the full x402 payment lifecycle on **Base Sepolia**.
+
+### 1. Configuration (`.env`)
+Create a `.env` file in the `examples/` directory:
+
+```env
+AGENT_PRIVATE_KEY=your_private_key_here
+MERCHANT_ADDRESS=your_merchant_receiving_wallet
+# Router is auto-loaded but can be overridden
+PAYNODE_CONTRACT_ADDRESS=0x24cD8b68aaC209217ff5a6ef1Bf55a59f2c8Ca6F
+```
+
+### 2. Run the Suite
+Start the merchant server and agent client:
+
+```bash
+# Terminal A
+npx ts-node packages/sdk-js/examples/express-server.ts
+
+# Terminal B
+npx ts-node packages/sdk-js/examples/agent-client.ts
+```
+
+The demo will output the handshake, on-chain transaction logs, and the final successful response with the **nested payment_info** object.
+
+---
+
+## 📡 Webhook Notifications
+
+See the dedicated [Webhooks](/integration/webhooks) page for setup instructions.
