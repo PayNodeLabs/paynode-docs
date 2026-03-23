@@ -74,7 +74,7 @@ The merchant's `PayNodeVerifier` (built into the middleware) queries the chain:
 2. ✅ Did it target the official PayNode Router contract?
 3. ✅ Was the correct merchant address in the `PaymentReceived` event?
 4. ✅ Was the amount ≥ required price?
-5. ✅ Is the token in the [accepted whitelist](/sdk-js#token-whitelist)?
+5. ✅ Is the token in the [accepted whitelist](/integration#token-whitelist)?
 6. ✅ Is the chainId correct? (cross-chain replay protection)
 7. ✅ Has this txHash been used before? (idempotency check)
 
@@ -88,7 +88,7 @@ If all checks pass → `200 OK`. No database needed.
 The SDK includes `IdempotencyStore` (in-memory or Redis) to track consumed txHashes. A hash is only valid once within a configurable TTL (default: 24 hours).
 
 ### Fake Token Attacks
-The `PayNodeVerifier` includes a built-in [Token Whitelist](/sdk-js#token-whitelist) that rejects non-approved ERC20 addresses — preventing attackers from deploying fake USDC contracts.
+The `PayNodeVerifier` includes a built-in [Token Whitelist](/integration#token-whitelist) that rejects non-approved ERC20 addresses — preventing attackers from deploying fake USDC contracts.
 
 ### Cross-Chain Replay
 The `PaymentReceived` event includes `chainId`. The Verifier checks that the chainId matches the expected network.
