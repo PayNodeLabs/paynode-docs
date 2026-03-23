@@ -50,7 +50,7 @@ The PayNode JavaScript SDK provides a seamless integration for both AI Agents (t
     | `merchantAddress` | `string` | **Yes** | - | Receiver's wallet address. |
     | `price` | `string` | **Yes** | - | Human-readable price (e.g. "0.5"). |
     | `rpcUrls` | `string[]` | No | Base Mainnet | List of RPC endpoints for verification. |
-    | `contractAddress` | `string` | No | `0x92e2...` | PayNode Router address. |
+    | `contractAddress` | `string` | No | `0x4A73...` | PayNode Router address. |
     | `chainId` | `number` | No | `8453` | Target chain (Base = 8453). |
     | `currency` | `string` | No | `"USDC"` | Token symbol for headers. |
     | `tokenAddress` | `string` | No | `0x8335...` | ERC20 token address (USDC). |
@@ -136,7 +136,7 @@ Create a `.env` file in the `examples/` directory:
 AGENT_PRIVATE_KEY=your_private_key_here
 MERCHANT_ADDRESS=your_merchant_receiving_wallet
 # Router is auto-loaded but can be overridden
-PAYNODE_CONTRACT_ADDRESS=0xB587Bc36aaCf65962eCd6Ba59e2DA76f2f575408
+PAYNODE_CONTRACT_ADDRESS=0x24cD8b68aaC209217ff5a6ef1Bf55a59f2c8Ca6F
 ```
 
 ### 2. Run the Suite
