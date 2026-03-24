@@ -1,6 +1,6 @@
 # Python SDK (`paynode-sdk-python`)
 
-import { Tabs } from 'nextra/components'
+import { Tabs } from "nextra/components";
 
 <Tabs items={['Usage', 'API Reference']}>
   <Tabs.Tab>
@@ -35,7 +35,7 @@ import { Tabs } from 'nextra/components'
     from paynode_sdk import PayNodeMiddleware
 
     app = FastAPI()
-    
+
     # Minimalist for Mainnet
     app.add_middleware(
         PayNodeMiddleware,
@@ -43,6 +43,7 @@ import { Tabs } from 'nextra/components'
         price="1.00", # 1.00 USDC
     )
     ```
+
   </Tabs.Tab>
   <Tabs.Tab>
     ## `PayNodeMiddleware`
@@ -69,6 +70,7 @@ import { Tabs } from 'nextra/components'
 
     ### `get(url, **kwargs)` / `post(url, **kwargs)`
     - Proxies to `requests.Session` with autonomous 402 handling.
+
   </Tabs.Tab>
 </Tabs>
 
@@ -78,10 +80,10 @@ import { Tabs } from 'nextra/components'
 
 The Verifier includes a built-in `ACCEPTED_TOKENS` whitelist per chain to block fake-token attacks.
 
-| Network | Chain ID | Accepted Token (USDC) |
-| :--- | :--- | :--- |
-| **Base Mainnet** | `8453` | `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` |
-| **Base Sepolia** | `84532` | `0xeAC1f2C7099CdaFfB91Aa3b8Ffd653Ef16935798` (Sandbox) |
+| Network          | Chain ID | Accepted Token (USDC)                                  |
+| :--------------- | :------- | :----------------------------------------------------- |
+| **Base Mainnet** | `8453`   | `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`           |
+| **Base Sepolia** | `84532`  | `0x109AEddD656Ed2761d1e210E179329105039c784` (Sandbox) |
 
 ### Customization
 

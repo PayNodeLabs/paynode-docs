@@ -6,34 +6,36 @@ PayNode's contracts are minimal, immutable, and fully verified on Basescan. The 
 
 ## 📍 Contract Addresses
 
-*The Treasury Address receiving the 1% protocol fee is `0x598bF63F5449876efafa7b36b77Deb2070621C0E`.*
+_The Treasury Address receiving the 1% protocol fee is `0x598bF63F5449876efafa7b36b77Deb2070621C0E`._
 
 ### 🔵 Base Mainnet (Production)
 
-| Configuration | Value |
-| :--- | :--- |
-| **Chain ID** | `8453` |
-| **Public RPC** | `https://mainnet.base.org` |
-| **Block Explorer** | [Basescan](https://basescan.org) |
+| Configuration      | Value                                        |
+| :----------------- | :------------------------------------------- |
+| **Chain ID**       | `8453`                                       |
+| **Public RPC**     | `https://mainnet.base.org`                   |
+| **Block Explorer** | [Basescan](https://basescan.org)             |
 | **PayNode Router** | `0x4A73696ccF76E7381b044cB95127B3784369Ed63` |
-| **USDC** | `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` |
+| **USDC**           | `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` |
 
 ### 🧪 Base Sepolia (Testnet / Sandbox)
 
 > **💡 How to get Testnet Funds?**
+>
 > 1. **Base Sepolia ETH (Gas)**: [Alchemy Base Faucet](https://www.alchemy.com/faucets/base-sepolia)
 > 2. **Mock USDC (Payment)**: Call `Mock_USDC.mint(address, amount)` via the "Write Contract" tab on Basescan.
 
-| Configuration | Value |
-| :--- | :--- |
-| **Chain ID** | `84532` |
-| **Public RPC** | `https://sepolia.base.org` |
+| Configuration      | Value                                            |
+| :----------------- | :----------------------------------------------- |
+| **Chain ID**       | `84532`                                          |
+| **Public RPC**     | `https://sepolia.base.org`                       |
 | **Block Explorer** | [Basescan Sepolia](https://sepolia.basescan.org) |
-| **PayNode Router** | `0x24cD8b68aaC209217ff5a6ef1Bf55a59f2c8Ca6F` |
-| **Mock USDC** | `0xeAC1f2C7099CdaFfB91Aa3b8Ffd653Ef16935798` |
+| **PayNode Router** | `0x24cD8b68aaC209217ff5a6ef1Bf55a59f2c8Ca6F`     |
+| **Mock USDC**      | `0x109AEddD656Ed2761d1e210E179329105039c784`     |
 
 #### 🚰 How to get Testnet USDC?
-1.  Open the **[MockUSDC Basescan Page](https://sepolia.basescan.org/address/0xeAC1f2C7099CdaFfB91Aa3b8Ffd653Ef16935798#writeContract)**.
+
+1.  Open the **[MockUSDC Basescan Page](https://sepolia.basescan.org/address/0x109AEddD656Ed2761d1e210E179329105039c784#writeContract)**.
 2.  Click the **"Contract"** tab -> **"Write Contract"** button.
 3.  Click **"Connect to Web3"** and link your wallet.
 4.  Expand function **`3. mint`**.
@@ -90,14 +92,14 @@ event PaymentReceived(
 
 ## 🛡️ Security Features
 
-| Feature | Description |
-| :--- | :--- |
-| **SafeERC20** | Handles non-standard ERC20 return values safely |
-| **Ownable2Step** | Two-step ownership transfer prevents accidental lockout |
-| **Pausable** | Owner can emergency-pause all payments |
-| **Custom Errors** | `InvalidAddress()`, `AmountMustBeGreaterThanZero()` — saves gas vs string requires |
-| **Deterministic Deploy** | `CREATE2` ensures same address across all EVM chains |
-| **ChainId in Events** | Prevents cross-chain replay attacks |
+| Feature                  | Description                                                                        |
+| :----------------------- | :--------------------------------------------------------------------------------- |
+| **SafeERC20**            | Handles non-standard ERC20 return values safely                                    |
+| **Ownable2Step**         | Two-step ownership transfer prevents accidental lockout                            |
+| **Pausable**             | Owner can emergency-pause all payments                                             |
+| **Custom Errors**        | `InvalidAddress()`, `AmountMustBeGreaterThanZero()` — saves gas vs string requires |
+| **Deterministic Deploy** | `CREATE2` ensures same address across all EVM chains                               |
+| **ChainId in Events**    | Prevents cross-chain replay attacks                                                |
 
 ---
 
@@ -107,7 +109,7 @@ To test PayNode on **Base Sepolia**, you need mock USDC. Our test token includes
 
 ### Option 1: Manual Mint via Basescan
 
-1.  Visit the **[MockUSDC Contract on Basescan](https://sepolia.basescan.org/address/0xeAC1f2C7099CdaFfB91Aa3b8Ffd653Ef16935798#writeContract)**.
+1.  Visit the **[MockUSDC Contract on Basescan](https://sepolia.basescan.org/address/0x109AEddD656Ed2761d1e210E179329105039c784#writeContract)**.
 2.  Connect your wallet (MetaMask/Coinbase Wallet).
 3.  Go to **Write Contract** -> **`mint`**.
 4.  Enter your address and an amount (e.g., `1000000000` for 1,000 USDC — remember it has 6 decimals).
@@ -126,7 +128,7 @@ client = PayNodeAgentClient("YOUR_PRIVATE_KEY", ["https://sepolia.base.org"])
 
 # Mock USDC ABI (minimal)
 usdc_abi = [{"inputs": [{"name": "to", "type": "address"}, {"name": "amount", "type": "uint256"}], "name": "mint", "outputs": [], "stateMutability": "nonpayable", "type": "function"}]
-usdc = client.w3.eth.contract(address="0xeAC1f2C7099CdaFfB91Aa3b8Ffd653Ef16935798", abi=usdc_abi)
+usdc = client.w3.eth.contract(address="0x109AEddD656Ed2761d1e210E179329105039c784", abi=usdc_abi)
 
 # Mint 1,000 USDC
 tx = usdc.functions.mint(client.account.address, 1000 * 10**6).build_transaction({
