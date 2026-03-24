@@ -1,6 +1,6 @@
 # JavaScript SDK (`@paynodelabs/sdk-js`)
 
-import { Tabs } from 'nextra/components'
+import { Tabs } from "nextra/components";
 
 The PayNode JavaScript SDK provides a seamless integration for both AI Agents (to pay) and Merchants (to accept payments). It handles the complete x402 lifecycle: intercepting 402 responses, on-chain execution via `ethers`, and stateless verification.
 
@@ -41,6 +41,7 @@ The PayNode JavaScript SDK provides a seamless integration for both AI Agents (t
       res.json({ message: 'Success! You paid for this data.' });
     });
     ```
+
   </Tabs.Tab>
   <Tabs.Tab>
     ## `x402_gate` Middleware
@@ -65,6 +66,7 @@ The PayNode JavaScript SDK provides a seamless integration for both AI Agents (t
 
     ### `get(url, config?)` / `post(url, data?, config?)`
     - Standard `axios` interface. Automatically handles 402 handshake.
+
   </Tabs.Tab>
 </Tabs>
 
@@ -74,34 +76,34 @@ The PayNode JavaScript SDK provides a seamless integration for both AI Agents (t
 
 The Verifier includes a built-in token whitelist to prevent fake-token attacks. By default, it accepts:
 
-| Network | Chain ID | Accepted Token (USDC) |
-| :--- | :--- | :--- |
-| **Base Mainnet** | `8453` | `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` |
-| **Base Sepolia** | `84532` | `0xeAC1f2C7099CdaFfB91Aa3b8Ffd653Ef16935798` (Sandbox) |
+| Network          | Chain ID | Accepted Token (USDC)                                  |
+| :--------------- | :------- | :----------------------------------------------------- |
+| **Base Mainnet** | `8453`   | `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`           |
+| **Base Sepolia** | `84532`  | `0x109AEddD656Ed2761d1e210E179329105039c784` (Sandbox) |
 
 ### Customization
 
 ```typescript
-import { PayNodeVerifier, ACCEPTED_TOKENS } from '@paynodelabs/sdk-js';
+import { PayNodeVerifier, ACCEPTED_TOKENS } from "@paynodelabs/sdk-js";
 
 // Use chain default (auto-detected from chainId)
 const verifier = new PayNodeVerifier({
-  rpcUrls: ['https://mainnet.base.org'],
-  chainId: 8453,
+  rpcUrls: ["https://mainnet.base.org"],
+  chainId: 8453
   // acceptedTokens is auto-loaded from ACCEPTED_TOKENS[8453]
 });
 
 // Custom whitelist (e.g. only accept DAI)
 const verifier = new PayNodeVerifier({
-  rpcUrls: ['https://mainnet.base.org'],
+  rpcUrls: ["https://mainnet.base.org"],
   chainId: 8453,
-  acceptedTokens: ['0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913']  // USDC on Base
+  acceptedTokens: ["0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"] // USDC on Base
 });
 
 // Explicitly disable whitelist (testing only)
 const verifier = new PayNodeVerifier({
-  rpcUrls: ['http://localhost:8545'],
-  acceptedTokens: []  // No whitelist check
+  rpcUrls: ["http://localhost:8545"],
+  acceptedTokens: [] // No whitelist check
 });
 ```
 
@@ -112,15 +114,19 @@ const verifier = new PayNodeVerifier({
 For production multi-instance deployments, use `RedisIdempotencyStore` instead of the default in-memory store:
 
 ```typescript
-import Redis from 'ioredis';
-import { x402_gate, RedisIdempotencyStore } from '@paynodelabs/sdk-js';
+import Redis from "ioredis";
+import { x402_gate, RedisIdempotencyStore } from "@paynodelabs/sdk-js";
 
 const redis = new Redis(process.env.REDIS_URL);
 
-app.get('/api/data', x402_gate({
-  // ...other options
-  store: new RedisIdempotencyStore(redis, 'paynode:tx:'),
-}), handler);
+app.get(
+  "/api/data",
+  x402_gate({
+    // ...other options
+    store: new RedisIdempotencyStore(redis, "paynode:tx:")
+  }),
+  handler
+);
 ```
 
 ---
@@ -130,6 +136,7 @@ app.get('/api/data', x402_gate({
 The source repository contains a ready-to-use demo suite in `packages/sdk-js/examples/`. This is the fastest way to test the full x402 payment lifecycle on **Base Sepolia**.
 
 ### 1. Configuration (`.env`)
+
 Create a `.env` file in the `examples/` directory:
 
 ```env
@@ -140,6 +147,7 @@ PAYNODE_CONTRACT_ADDRESS=0x24cD8b68aaC209217ff5a6ef1Bf55a59f2c8Ca6F
 ```
 
 ### 2. Run the Suite
+
 Start the merchant server and agent client:
 
 ```bash
