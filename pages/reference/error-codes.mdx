@@ -18,13 +18,13 @@ Stuck? Read this first. This page lists every error you may encounter, with caus
 
 | Error Code | HTTP | Common Cause | Solution |
 | :--- | :--- | :--- | :--- |
-| `missing_receipt` | `402` | Request lacks `x-paynode-receipt` header | Ensure client uses PayNode SDK or manually injects the header |
-| `invalid_receipt` | `403` | TxHash format invalid or malformed | (1) Check if tx is still pending (2) Verify RPC node is synced (3) Check network match |
-| `duplicate_transaction` | `403` | TxHash already consumed (replay attack) | Each txHash is valid for exactly one request. Do not reuse. |
+| `missing_receipt` | `402` | Request lacks `X-402-Payload` header | Ensure client uses PayNode SDK v2.0+ or manually injects the header |
+| `invalid_receipt` | `403` | Payload format invalid or malformed | (1) Check if tx is still pending (2) Verify RPC node is synced (3) Check network match |
+| `duplicate_transaction` | `403` | Transaction already consumed (replay attack) | Each payment is valid for exactly one request. Do not reuse. |
 | `transaction_not_found` | `403` | TxHash returns null receipt from RPC | Transaction may not be mined yet. Wait and retry. |
 | `transaction_failed` | `403` | Transaction reverted on-chain (status = 0) | Check Basescan for revert reason. Common: insufficient allowance or balance. |
-| `wrong_contract` | `403` | Event was not emitted by official contract | Verify the `x-paynode-contract` header matches the Router address. |
-| `order_mismatch` | `403` | Order ID in receipt does not match requested | Ensure `order_id` in headers matches the on-chain data. |
+| `wrong_contract` | `403` | Event was not emitted by official contract | Verify the router address in `X-402-Required` matches the official PayNode Router. |
+| `order_mismatch` | `403` | Order ID in payload does not match requested | Ensure `X-402-Order-Id` header matches the orderId in the payload. |
 
 ---
 
