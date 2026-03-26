@@ -1,0 +1,245 @@
+# Payment Methods
+
+The x402 v2 protocol supports three payment architectures, each optimized for different use cases in the M2M (Machine-to-Machine) economy.
+
+## Overview
+
+| Method | Settlement | Speed | Gas Cost | Use Case |
+|--------|-----------|-------|----------|----------|
+| **On-chain** | Synchronous | ~2s | Agent pays | Real-time, high-value APIs |
+| **EIP-3009** | Synchronous | ~50ms | Zero | High-frequency, latency-sensitive |
+| **Async Settlement** | Asynchronous | Instant data access | Shared (optimized) | Micro-transactions, high-volume |
+
+---
+
+## Method 1: On-chain (Router.pay())
+
+The traditional approach where the Agent submits an on-chain transaction directly to the PayNode Router contract.
+
+### How It Works
+
+1. **Agent detects 402** → Parses `X-402-Required` header
+2. **Agent pays on-chain** → Calls `Router.pay(USDC, merchant, amount, orderId)`
+3. **Router returns txHash** → Transaction confirmed on Base L2
+4. **Agent retries request** → Includes `X-402-Payload` with txHash
+5. **Merchant verifies** → Checks txHash on-chain, serves data if valid
+
+### When to Use
+
+- **Real-time settlement required**: Merchant needs on-chain proof before serving data
+- **Single API calls**: One-off payments where speed isn't critical
+- **High-value transactions**: When you want immediate finality on-chain
+- **Simple integration**: Fewest moving parts, easiest to debug
+
+### Code Example
+
+**Agent Side (JavaScript):**
+```typescript
+import { PayNodeAgentClient } from '@paynodelabs/sdk-js';
+
+const agent = new PayNodeAgentClient(process.env.PRIVATE_KEY);
+
+// Automatically detects 402, pays on-chain, retries
+const response = await agent.requestGate('https://api.merchant.com/data');
+const data = await response.json();
+```
+
+**Merchant Side (Express.js):**
+```typescript
+import { x402Gate } from '@paynodelabs/sdk-js';
+
+app.get('/api/data', x402Gate({
+  merchantAddress: '0xYourWallet...',
+  price: '1.00' // 1.00 USDC
+}), (req, res) => {
+  res.json({ data: 'Premium content' });
+});
+```
+
+### Technical Details
+
+- **Network Calls**: 2-3 (approve, pay, retry)
+- **Gas Estimation**: ~65,000 gas for `Router.pay()`
+- **Confirmation Time**: ~2 seconds on Base L2
+- **Failure Modes**: Insufficient balance, nonce conflicts, gas estimation errors
+
+---
+
+## Method 2: EIP-3009 (Off-chain Signing)
+
+The recommended approach for most use cases. The Agent signs a `TransferWithAuthorization` message off-chain, and the merchant handles on-chain submission.
+
+### How It Works
+
+1. **Agent detects 402** → Parses `X-402-Required` header
+2. **Agent signs off-chain** → Calls `signTransferWithAuthorization()` (~50ms)
+3. **Agent retries request** → Includes `X-402-Payload` with signature
+4. **Merchant decides strategy:**
+   - **Verify-first**: Confirm signature on-chain, then serve data
+   - **Serve-first**: Return data immediately, verify asynchronously
+5. **Merchant submits payment** → If not already verified, merchant submits to chain
+
+### Key Advantage: Merchant Flexibility
+
+With EIP-3009, the **merchant decides** the verification strategy:
+
+- **Verify-first**: Confirm the signature on-chain before serving data (most secure)
+- **Serve-first**: Return data immediately, verify asynchronously (lowest latency for agent)
+- **Hybrid**: Verify signature validity locally (fast), submit to chain later
+
+### When to Use
+
+- **High-frequency APIs**: Agent makes many requests per session
+- **Zero gas for agents**: Agent wallet doesn't need ETH for gas (merchant submits and pays)
+- **Latency-critical**: Sub-50ms signing, no blockchain wait
+- **Mobile/IoT agents**: Devices with limited resources
+
+### Code Example
+
+**Agent Side (JavaScript):**
+```typescript
+import { PayNodeAgentClient } from '@paynodelabs/sdk-js';
+
+const agent = new PayNodeAgentClient(process.env.PRIVATE_KEY);
+
+// Signs off-chain (~50ms), no gas needed
+const response = await agent.requestGate('https://api.merchant.com/data');
+const data = await response.json();
+```
+
+**Merchant Side (Express.js):**
+```typescript
+import { x402Gate, PayNodeVerifier } from '@paynodelabs/sdk-js';
+
+// Option A: Verify before serving (default)
+app.get('/api/data', x402Gate({
+  merchantAddress: '0xYourWallet...',
+  price: '1.00',
+  verifyMode: 'before' // or 'after'
+}), (req, res) => {
+  res.json({ data: 'Premium content' });
+});
+
+// Option B: Serve first, verify async
+app.get('/api/data', x402Gate({
+  merchantAddress: '0xYourWallet...',
+  price: '1.00',
+  verifyMode: 'after'
+}), (req, res) => {
+  res.json({ data: 'Premium content' });
+});
+```
+
+### Technical Details
+
+- **EIP-712 Domain**: Uses USDC's real domain (`name: "USD Coin", version: "2"`)
+- **Signature Components**: `v`, `r`, `s` + authorization parameters
+- **Replay Protection**: Nonce-based, each signature is single-use
+- **Merchant Submits**: Merchant pays gas, can batch multiple payments
+
+---
+
+## Method 3: Async Settlement (Future)
+
+A future architecture where transactions are batched and settled periodically by a smart contract, enabling micro-transaction economics.
+
+### How It Works
+
+1. **Agent detects 402** → Parses `X-402-Required` header
+2. **Agent signs off-chain** → Calls `signTransferWithAuthorization()`
+3. **Agent submits to settlement contract** → Acknowledged immediately
+4. **Settlement contract grants access** → Data access to merchant
+5. **Merchant serves data** → Instant delivery to agent
+6. **Periodic settlement** → Contract batches signatures and settles on-chain
+
+### Key Innovations
+
+- **Immediate Data Access**: Agent gets data instantly after signing
+- **Batched Gas Costs**: Settlement contract aggregates N signatures into 1 transaction
+- **Economics of Scale**: Gas cost per transaction approaches zero as volume increases
+- **Flexible Triggers**: Settle by time (hourly/daily) or volume (every 100 signatures)
+
+### When to Use
+
+- **Micro-transactions**: API calls costing ~$0.01
+- **High-volume M2M**: Thousands of small payments per hour
+- **Cost-optimized pipelines**: Where gas efficiency matters more than instant settlement
+- **Streaming payments**: Continuous data feeds with per-unit pricing
+
+### Architecture (Proposed)
+
+```
+┌─────────────┐     ┌─────────────────┐     ┌─────────────┐
+│   Agent     │────>│  Settlement     │────>│  Merchant   │
+│             │     │  Contract       │     │             │
+│ Signs off-  │     │                 │     │ Receives    │
+│ chain       │     │ • Stores sigs   │     │ data access │
+│             │     │ • Triggers batch│     │ immediately │
+└─────────────┘     │ • Settles USDC  │     └─────────────┘
+                    └─────────────────┘
+                           │
+                    ┌──────┴──────┐
+                    │  Periodic   │
+                    │  Settlement │
+                    │  (on-chain) │
+                    └─────────────┘
+```
+
+### Technical Considerations
+
+- **Trust Model**: Agent trusts settlement contract to eventually settle
+- **Dispute Resolution**: Challenge period for merchants to dispute invalid signatures
+- **Capital Efficiency**: Merchant waits for settlement vs. instant finality
+- **Contract Design**: Must handle signature aggregation, batching, and failure recovery
+
+---
+
+## Comparison Matrix
+
+| Feature | On-chain | EIP-3009 | Async Settlement |
+|---------|----------|----------|------------------|
+| **Agent Speed** | ~2s | ~50ms | ~50ms |
+| **Merchant Speed** | Instant (tx confirmed) | Flexible | Instant (data access) |
+| **Gas Cost (Agent)** | ~65k gas | 0 | 0 |
+| **Gas Cost (Merchant)** | 0 | ~45k gas (merchant pays) | ~15k gas per sig (batched) |
+| **Settlement Time** | Immediate | Flexible | Periodic |
+| **Capital Lockup** | None | None | Minimal |
+| **Complexity** | Low | Medium | High |
+| **Best For** | Single calls, high-value | High-frequency, latency | Micro-tx, high-volume |
+
+---
+
+## Choosing the Right Method
+
+The merchant controls which payment method is offered via the `accepts` array in the 402 response. The SDK picks the first available method.
+
+### Start with On-chain (Recommended)
+
+Most merchants should list On-chain first. It's simpler, more secure, and has immediate finality.
+
+- Immediate on-chain settlement
+- Simplest integration — merchant verifies txHash
+- Agent pays gas — no merchant capital risk
+- Best for high-value, low-frequency APIs
+
+### Offer EIP-3009 When
+
+- You need zero-gas UX for agents
+- High-frequency APIs where gas cost adds up
+- You're willing to pay gas on behalf of agents
+- Latency-critical applications (~50ms signing)
+
+### Consider Async Settlement When
+
+- You're building high-volume M2M systems
+- Micro-transaction economics matter
+- You need to optimize gas across thousands of payments
+- You're willing to wait for the protocol to mature
+
+---
+
+## Next Steps
+
+- [Quickstart Guide](/quickstart) — Get started in 1 minute
+- [SDK Integration](/integration) — Full API reference
+- [Architecture](/concepts/architecture) — Deep dive into protocol design

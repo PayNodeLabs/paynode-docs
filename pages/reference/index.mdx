@@ -31,11 +31,11 @@ _The Treasury Address receiving the 1% protocol fee is `0x598bF63F5449876efafa7b
 | **Public RPC**     | `https://sepolia.base.org`                       |
 | **Block Explorer** | [Basescan Sepolia](https://sepolia.basescan.org) |
 | **PayNode Router** | `0x24cD8b68aaC209217ff5a6ef1Bf55a59f2c8Ca6F`     |
-| **Mock USDC**      | `0x109AEddD656Ed2761d1e210E179329105039c784`     |
+| **Mock USDC**      | `0x65c088EfBDB0E03185Dbe8e258Ad0cf4Ab7946b0`     |
 
 #### 🚰 How to get Testnet USDC?
 
-1.  Open the **[MockUSDC Basescan Page](https://sepolia.basescan.org/address/0x109AEddD656Ed2761d1e210E179329105039c784#writeContract)**.
+1.  Open the **[MockUSDC Basescan Page](https://sepolia.basescan.org/address/0x65c088EfBDB0E03185Dbe8e258Ad0cf4Ab7946b0#writeContract)**.
 2.  Click the **"Contract"** tab -> **"Write Contract"** button.
 3.  Click **"Connect to Web3"** and link your wallet.
 4.  Expand function **`3. mint`**.
@@ -109,7 +109,7 @@ To test PayNode on **Base Sepolia**, you need mock USDC. Our test token includes
 
 ### Option 1: Manual Mint via Basescan
 
-1.  Visit the **[MockUSDC Contract on Basescan](https://sepolia.basescan.org/address/0x109AEddD656Ed2761d1e210E179329105039c784#writeContract)**.
+1.  Visit the **[MockUSDC Contract on Basescan](https://sepolia.basescan.org/address/0x65c088EfBDB0E03185Dbe8e258Ad0cf4Ab7946b0#writeContract)**.
 2.  Connect your wallet (MetaMask/Coinbase Wallet).
 3.  Go to **Write Contract** -> **`mint`**.
 4.  Enter your address and an amount (e.g., `1000000000` for 1,000 USDC — remember it has 6 decimals).
@@ -128,7 +128,7 @@ client = PayNodeAgentClient("YOUR_PRIVATE_KEY", ["https://sepolia.base.org"])
 
 # Mock USDC ABI (minimal)
 usdc_abi = [{"inputs": [{"name": "to", "type": "address"}, {"name": "amount", "type": "uint256"}], "name": "mint", "outputs": [], "stateMutability": "nonpayable", "type": "function"}]
-usdc = client.w3.eth.contract(address="0x109AEddD656Ed2761d1e210E179329105039c784", abi=usdc_abi)
+usdc = client.w3.eth.contract(address="0x65c088EfBDB0E03185Dbe8e258Ad0cf4Ab7946b0", abi=usdc_abi)
 
 # Mint 1,000 USDC
 tx = usdc.functions.mint(client.account.address, 1000 * 10**6).build_transaction({

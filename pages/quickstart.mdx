@@ -32,10 +32,10 @@ main();
 Protect your API route. Defaults to **USDC on Base Mainnet**.
 
 ```javascript
-const { x402_gate, PAYNODE_ROUTER_ADDRESS_SANDBOX, BASE_USDC_ADDRESS_SANDBOX } = require('@paynodelabs/sdk-js');
+const { x402Gate, PAYNODE_ROUTER_ADDRESS_SANDBOX, BASE_USDC_ADDRESS_SANDBOX } = require('@paynodelabs/sdk-js');
 
 // 1. Minimum config for Sandbox (Base Sepolia)
-app.get('/api/data', x402_gate({
+app.get('/api/data', x402Gate({
   merchantAddress: '0xYOUR_WALLET',
   price: '0.10',
   chainId: 84532, 
@@ -46,7 +46,7 @@ app.get('/api/data', x402_gate({
 });
 
 // 2. Minimum config for Mainnet (Base)
-// app.get('/api/data', x402_gate({ merchantAddress: '0x...', price: '1.00' }));
+// app.get('/api/data', x402Gate({ merchantAddress: '0x...', price: '1.00' }));
 ```
 
 ---

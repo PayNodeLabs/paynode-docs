@@ -12,29 +12,69 @@ The PayNode JavaScript SDK provides a seamless integration for both AI Agents (t
 
     The `PayNodeAgentClient` intercepts HTTP `402` and handles the payment handshake automatically.
 
+    ### Recommended: On-chain (Router.pay())
+
+    Most merchants list On-chain first in their `accepts` array. Agent submits a transaction via PayNode Router.
+
     ```typescript
     import { PayNodeAgentClient } from '@paynodelabs/sdk-js';
 
-    // Minimalist: Defaults to Base Mainnet RPCs
     const agent = new PayNodeAgentClient(process.env.AGENT_PRIVATE_KEY);
 
-    // Make an autonomous request
-    const response = await agent.get('https://api.merchant.com/premium-data');
+    // SDK picks the first method from merchant's accepts array
+    const response = await agent.requestGate('https://api.merchant.com/premium-data');
     console.log(response.data);
+    ```
+
+    ### Alternative: EIP-3009 (Off-chain, Gasless)
+
+    If merchant lists EIP-3009 first, agent signs off-chain and merchant submits on-chain.
+
+    ```typescript
+    import { PayNodeAgentClient } from '@paynodelabs/sdk-js';
+
+    const agent = new PayNodeAgentClient(process.env.AGENT_PRIVATE_KEY);
+
+    // SDK auto-signs if merchant accepts EIP-3009
+    const response = await agent.requestGate('https://api.merchant.com/premium-data');
+    console.log(response.data);
+    ```
+
+    ### Manual Control (Advanced)
+
+    For custom flows, call payment methods directly:
+
+    ```typescript
+    import { PayNodeAgentClient } from '@paynodelabs/sdk-js';
+
+    const agent = new PayNodeAgentClient(process.env.AGENT_PRIVATE_KEY);
+
+    // On-chain: agent pays gas, immediate settlement
+    const { txHash } = await agent.pay({
+      merchant: '0xMerchantWallet...',
+      amount: '1000000',
+      orderId: 'order_123'
+    });
+
+    // EIP-3009: agent signs, merchant pays gas
+    const { signature, authorization } = await agent.signTransferWithAuthorization({
+      to: '0xMerchantWallet...',
+      value: '1000000',
+    });
     ```
 
     ## 🏪 For Merchants (Express)
 
-    The `x402_gate` middleware provides instant protection for your API routes.
+    The `x402Gate` middleware provides instant protection for your API routes.
 
     ```typescript
     import express from 'express';
-    import { x402_gate } from '@paynodelabs/sdk-js';
+    import { x402Gate } from '@paynodelabs/sdk-js';
 
     const app = express();
 
     // 2-parameter minimalist initialization (Defaults to Base Mainnet USDC)
-    app.get('/api/protected', x402_gate({
+    app.get('/api/protected', x402Gate({
       merchantAddress: '0xYourWalletAddress',
       price: '1.00' // 1.00 USDC
     }), (req, res) => {
@@ -44,7 +84,7 @@ The PayNode JavaScript SDK provides a seamless integration for both AI Agents (t
 
   </Tabs.Tab>
   <Tabs.Tab>
-    ## `x402_gate` Middleware
+    ## `x402Gate` Middleware
 
     | Parameter | Type | Required | Default | Description |
     | :--- | :--- | :--- | :--- | :--- |
@@ -64,8 +104,8 @@ The PayNode JavaScript SDK provides a seamless integration for both AI Agents (t
     - `privateKey`: `string` (**Required**) - The payer's wallet private key.
     - `rpcUrls`: `string[]` (Optional) - Defaults to Base Mainnet public RPCs.
 
-    ### `get(url, config?)` / `post(url, data?, config?)`
-    - Standard `axios` interface. Automatically handles 402 handshake.
+    ### `requestGate(url, config?)`
+    - Core autonomous payment method. Automatically handles 402 handshake, executes USDC payment, and retries.
 
   </Tabs.Tab>
 </Tabs>
@@ -79,7 +119,7 @@ The Verifier includes a built-in token whitelist to prevent fake-token attacks. 
 | Network          | Chain ID | Accepted Token (USDC)                                  |
 | :--------------- | :------- | :----------------------------------------------------- |
 | **Base Mainnet** | `8453`   | `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`           |
-| **Base Sepolia** | `84532`  | `0x109AEddD656Ed2761d1e210E179329105039c784` (Sandbox) |
+| **Base Sepolia** | `84532`  | `0x65c088EfBDB0E03185Dbe8e258Ad0cf4Ab7946b0` (Sandbox) |
 
 ### Customization
 
@@ -115,13 +155,13 @@ For production multi-instance deployments, use `RedisIdempotencyStore` instead o
 
 ```typescript
 import Redis from "ioredis";
-import { x402_gate, RedisIdempotencyStore } from "@paynodelabs/sdk-js";
+import { x402Gate, RedisIdempotencyStore } from "@paynodelabs/sdk-js";
 
 const redis = new Redis(process.env.REDIS_URL);
 
 app.get(
   "/api/data",
-  x402_gate({
+  x402Gate({
     // ...other options
     store: new RedisIdempotencyStore(redis, "paynode:tx:")
   }),

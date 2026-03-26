@@ -8,22 +8,58 @@ import { Tabs } from "nextra/components";
 
     The `PayNodeAgentClient` defaults to **Base Mainnet** RPCs.
 
+    ### Recommended: On-chain (Router.pay())
+
+    Most merchants list On-chain first in their `accepts` array. Agent submits a transaction via PayNode Router.
+
     ```python
     import os
     from paynode_sdk import PayNodeAgentClient
 
-    # Minimalist: only private key required for Mainnet
     agent = PayNodeAgentClient(private_key=os.getenv("AGENT_PRIVATE_KEY"))
 
-    # Or specify custom RPCs
-    agent_custom = PayNodeAgentClient(
-        private_key=os.getenv("AGENT_PRIVATE_KEY"),
-        rpc_urls=["https://base-sepolia.g.alchemy.com/v2/..."]
+    # SDK picks the first method from merchant's accepts array
+    response = agent.request_gate("https://api.merchant.com/data")
+    print(response.json())
+    ```
+
+    ### Alternative: EIP-3009 (Off-chain, Gasless)
+
+    If merchant lists EIP-3009 first, agent signs off-chain and merchant submits on-chain.
+
+    ```python
+    import os
+    from paynode_sdk import PayNodeAgentClient
+
+    agent = PayNodeAgentClient(private_key=os.getenv("AGENT_PRIVATE_KEY"))
+
+    # SDK auto-signs if merchant accepts EIP-3009
+    response = agent.request_gate("https://api.merchant.com/data")
+    print(response.json())
+    ```
+
+    ### Manual Control (Advanced)
+
+    For custom flows, call payment methods directly:
+
+    ```python
+    import os
+    from paynode_sdk import PayNodeAgentClient
+
+    agent = PayNodeAgentClient(private_key=os.getenv("AGENT_PRIVATE_KEY"))
+
+    # On-chain: agent pays gas, immediate settlement
+    tx_hash = agent.pay(
+        merchant="0xMerchantWallet...",
+        amount=1000000,
+        order_id="order_123"
     )
 
-    # Simple GET/POST helpers
-    response = agent.get("https://api.merchant.com/data")
-    print(response.json())
+    # EIP-3009: agent signs, merchant pays gas
+    signature, authorization = agent.sign_transfer_with_authorization(
+        to="0xMerchantWallet...",
+        value=1000000,
+    )
     ```
 
     ## 🏪 For Merchants (FastAPI)
@@ -68,8 +104,8 @@ import { Tabs } from "nextra/components";
     - `private_key`: `str` (**Required**) - Agent's private key.
     - `rpc_urls`: `list | str` (Optional) - Defaults to Base Mainnet public RPCs.
 
-    ### `get(url, **kwargs)` / `post(url, **kwargs)`
-    - Proxies to `requests.Session` with autonomous 402 handling.
+    ### `request_gate(url, **kwargs)`
+    - Core autonomous payment method. Automatically handles 402 handshake, executes USDC payment, and retries.
 
   </Tabs.Tab>
 </Tabs>
@@ -83,7 +119,7 @@ The Verifier includes a built-in `ACCEPTED_TOKENS` whitelist per chain to block 
 | Network          | Chain ID | Accepted Token (USDC)                                  |
 | :--------------- | :------- | :----------------------------------------------------- |
 | **Base Mainnet** | `8453`   | `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`           |
-| **Base Sepolia** | `84532`  | `0x109AEddD656Ed2761d1e210E179329105039c784` (Sandbox) |
+| **Base Sepolia** | `84532`  | `0x65c088EfBDB0E03185Dbe8e258Ad0cf4Ab7946b0` (Sandbox) |
 
 ### Customization
 
