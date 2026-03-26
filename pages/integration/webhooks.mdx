@@ -98,7 +98,7 @@ Every webhook POST contains a JSON body with the following structure:
 
 ## Signature Verification
 
-Every webhook request includes an HMAC-SHA256 signature in the `x-paynode-signature` header. **You MUST verify this signature** to prevent spoofed webhook calls.
+Every webhook request includes an HMAC-SHA256 signature in the `X-402-Signature` header. **You MUST verify this signature** to prevent spoofed webhook calls.
 
 ### Node.js Verification
 
@@ -107,7 +107,7 @@ import crypto from 'crypto';
 
 app.post('/api/paynode-webhook', (req, res) => {
   const payload = JSON.stringify(req.body);
-  const signature = req.headers['x-paynode-signature'];
+  const signature = req.headers['X-402-Signature'];
   
   const expected = `sha256=${
     crypto.createHmac('sha256', process.env.WEBHOOK_SECRET)
@@ -134,7 +134,7 @@ import hmac, hashlib, json
 @app.post("/api/paynode-webhook")
 async def webhook(request: Request):
     body = await request.body()
-    signature = request.headers.get("x-paynode-signature", "")
+    signature = request.headers.get("X-402-Signature", "")
     
     expected = "sha256=" + hmac.new(
         WEBHOOK_SECRET.encode(), body, hashlib.sha256
@@ -155,7 +155,7 @@ async def webhook(request: Request):
 
 | Header | Description |
 | :--- | :--- |
-| `x-paynode-signature` | `sha256={hmac_hex}` — HMAC-SHA256 of the JSON body |
+| `X-402-Signature` | `sha256={hmac_hex}` — HMAC-SHA256 of the JSON body |
 | `x-paynode-event` | Event type (currently: `payment.received`) |
 | `x-paynode-delivery-id` | `{txHash}-{attempt}` — unique delivery ID for deduplication |
 | `Content-Type` | `application/json` |
