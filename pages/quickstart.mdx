@@ -11,7 +11,7 @@ npm install @paynodelabs/sdk-js
 ## 2. Agent (Payer)
 
 ```javascript
-const { PayNodeAgentClient } = require('@paynodelabs/sdk-js');
+import { PayNodeAgentClient } from '@paynodelabs/sdk-js';
 
 async function main() {
   // Now only needs Private Key! (Defaults to Base Mainnet RPCs)
@@ -32,7 +32,7 @@ main();
 Protect your API route. Defaults to **USDC on Base Mainnet**.
 
 ```javascript
-const { x402Gate, PAYNODE_ROUTER_ADDRESS_SANDBOX, BASE_USDC_ADDRESS_SANDBOX } = require('@paynodelabs/sdk-js');
+import { x402Gate, PAYNODE_ROUTER_ADDRESS_SANDBOX, BASE_USDC_ADDRESS_SANDBOX } from '@paynodelabs/sdk-js';
 
 // 1. Minimum config for Sandbox (Base Sepolia)
 app.get('/api/data', x402Gate({

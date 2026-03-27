@@ -50,15 +50,21 @@ import { Tabs } from "nextra/components";
 
     # On-chain: agent pays gas, immediate settlement
     tx_hash = agent.pay(
-        merchant="0xMerchantWallet...",
+        router_addr="0xRouterAddress...",
+        token_addr="0xUSDCAddress...",
+        merchant_addr="0xMerchantWallet...",
         amount=1000000,
         order_id="order_123"
     )
 
     # EIP-3009: agent signs, merchant pays gas
-    signature, authorization = agent.sign_transfer_with_authorization(
+    payload = agent.sign_transfer_with_authorization(
+        token_addr="0xUSDCAddress...",
         to="0xMerchantWallet...",
-        value=1000000,
+        amount=1000000,
+        valid_after=valid_after,
+        valid_before=valid_before,
+        nonce=nonce
     )
     ```
 
