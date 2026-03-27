@@ -102,7 +102,7 @@ event PaymentReceived(
 | **SafeERC20**            | Handles non-standard ERC20 return values safely                                    |
 | **Ownable2Step**         | Two-step ownership transfer prevents accidental lockout                            |
 | **Pausable**             | Owner can emergency-pause all payments                                             |
-| **Custom Errors**        | `InvalidAddress()`, `AmountMustBeGreaterThanZero()` — saves gas vs string requires |
+| **Custom Errors**        | `InvalidAddress()`, `AmountTooLow()`, `UnauthorizedCaller()` — saves gas vs string requires |
 | **Deterministic Deploy** | `CREATE2` ensures same address across all EVM chains                               |
 | **ChainId in Events**    | Prevents cross-chain replay attacks                                                |
 
