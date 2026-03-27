@@ -20,10 +20,15 @@ _The Treasury Address receiving the 1% protocol fee is `0x598bF63F5449876efafa7b
 
 ### 🧪 Base Sepolia (Testnet / Sandbox)
 
-> **💡 How to get Testnet Funds?**
+> **💡 How to get Testnet Gas (ETH)?**
 >
-> 1. **Base Sepolia ETH (Gas)**: [Alchemy Base Faucet](https://www.alchemy.com/faucets/base-sepolia)
-> 2. **Mock USDC (Payment)**: Call `Mock_USDC.mint(address, amount)` via the "Write Contract" tab on Basescan.
+> 1. **Optimism Faucet** (Highly Recommended): [console.optimism.io/faucet](https://console.optimism.io/faucet) — 0.01 ETH daily.
+>
+> _Note: Faucets frequently go down or change rules. If this link fails, search for 'Base Sepolia Faucet' or bridge ETH from Sepolia (L1) to Base (L2) independently._
+>
+> **💰 How to get Testnet USDC?**
+>
+> Use the PayNode CLI: `bun run paynode-402 mint --network testnet` or manually call `mint` on the [MockUSDC contract](https://sepolia.basescan.org/address/0x65c088EfBDB0E03185Dbe8e258Ad0cf4Ab7946b0#writeContract).
 
 | Configuration      | Value                                            |
 | :----------------- | :----------------------------------------------- |
