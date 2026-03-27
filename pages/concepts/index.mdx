@@ -76,19 +76,21 @@ The decoded JSON structure:
 ```
 
 > **Important**: `amount` always uses the token's **smallest unit** (atomic unit). For USDC (6 decimals), `100,000` represents **$0.10**. The SDK supports two payment types:
+>
 > - `eip3009`: Off-chain signature (fastest, ~50ms)
 > - `onchain`: Traditional on-chain transaction (~2s)
-
 
 ### 2. The Execution (Agent)
 
 The SDK intercepts the `402`, parses the `X-402-Required` JSON, and:
 
 **For EIP-3009 (recommended):**
+
 1. Signs a `TransferWithAuthorization` message off-chain
 2. No gas needed from the agent wallet
 
 **For On-chain:**
+
 1. Checks balance and allowance
 2. Calls `Router.pay(token, merchant, amount, orderId)` on Base L2
 3. Waits for confirmation (~2 seconds)
@@ -100,7 +102,7 @@ The Agent retries the original request with a Base64-encoded JSON payload:
 ```http
 POST /premium-data HTTP/1.1
 Content-Type: application/json
-X-402-Payload: eyJ2ZXJzaW9uIjoiMy4xIiwidHlwZSI6Im9uY2hhaW4iLCJvcmRlcklkIjoiYWdlbnRfanNfMTcxNjAwMDAwMCIsInBheWxvYWQiOnsidHhIYXNoIjoiMHg3MjQ5ZDUyNTVkOT..."
+X-402-Payload: eyJ2ZXJzaW9uIjoiMi4yLjAiLCJ0eXBlIjoib25jaGFpbiIsIm9yZGVySWQiOiJhZ2VudF9qc18xNzE2MDAwMDAwIiwicGF5bG9hZCI6eyJ0eEhhc2giOiIweDcyNDlkNTI1NWQ5..."
 X-402-Order-Id: agent_js_1716000000
 ```
 
@@ -108,7 +110,7 @@ The decoded payload structure:
 
 ```json
 {
-  "version": "3.1",
+  "version": "2.2.0",
   "type": "onchain",
   "orderId": "agent_js_1716000000",
   "payload": {
@@ -123,14 +125,15 @@ The merchant's `PayNodeVerifier` (built into the middleware) uses the unified `v
 
 ```typescript
 const result = await verifier.verify(unifiedPayload, {
-  merchantAddress: '0xMerchantWallet...',
-  tokenAddress: '0xUSDCAddress...',
-  amount: '100000',
-  orderId: 'agent_js_1716000000'
+  merchantAddress: "0xMerchantWallet...",
+  tokenAddress: "0xUSDCAddress...",
+  amount: "100000",
+  orderId: "agent_js_1716000000"
 });
 ```
 
 Verification checks:
+
 1. ✅ Does the txHash/signature exist and is valid?
 2. ✅ Did it target the official PayNode Router contract?
 3. ✅ Was the correct merchant address in the event?

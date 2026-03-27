@@ -12,37 +12,24 @@ The PayNode JavaScript SDK provides a seamless integration for both AI Agents (t
 
     The `PayNodeAgentClient` intercepts HTTP `402` and handles the payment handshake automatically.
 
-    ### Recommended: On-chain (Router.pay())
+    ### 🚀 Recommended: Auto-Select (`requestGate`)
 
-    Most merchants list On-chain first in their `accepts` array. Agent submits a transaction via PayNode Router.
-
-    ```typescript
-    import { PayNodeAgentClient } from '@paynodelabs/sdk-js';
-
-    const agent = new PayNodeAgentClient(process.env.AGENT_PRIVATE_KEY);
-
-    // SDK picks the first method from merchant's accepts array
-    const response = await agent.requestGate('https://api.merchant.com/premium-data');
-    console.log(response.data);
-    ```
-
-    ### Alternative: EIP-3009 (Off-chain, Gasless)
-
-    If merchant lists EIP-3009 first, agent signs off-chain and merchant submits on-chain.
+    The `PayNodeAgentClient` automatically handles the 402 handshake. It parses the merchant's `accepts` array and selects the best payment method (e.g., preferring EIP-3009 if available).
 
     ```typescript
     import { PayNodeAgentClient } from '@paynodelabs/sdk-js';
 
     const agent = new PayNodeAgentClient(process.env.AGENT_PRIVATE_KEY);
 
-    // SDK auto-signs if merchant accepts EIP-3009
+    // SDK automatically chooses between On-chain or EIP-3009
     const response = await agent.requestGate('https://api.merchant.com/premium-data');
-    console.log(response.data);
+    const data = await response.json();
+    console.log(data);
     ```
 
-    ### Manual Control (Advanced)
+    ### Manual: On-chain (`agent.pay()`)
 
-    For custom flows, call payment methods directly:
+    If you want full control over the transaction, you can manually call the `pay` method. This executes an on-chain transaction immediately.
 
     ```typescript
     import { PayNodeAgentClient } from '@paynodelabs/sdk-js';
@@ -50,18 +37,39 @@ The PayNode JavaScript SDK provides a seamless integration for both AI Agents (t
     const agent = new PayNodeAgentClient(process.env.AGENT_PRIVATE_KEY);
 
     // On-chain: agent pays gas, immediate settlement
-    const { txHash } = await agent.pay({
-      merchant: '0xMerchantWallet...',
-      amount: '1000000',
-      orderId: 'order_123'
-    });
-
-    // EIP-3009: agent signs, merchant pays gas
-    const { signature, authorization } = await agent.signTransferWithAuthorization({
-      to: '0xMerchantWallet...',
-      value: '1000000',
-    });
+    const txHash = await agent.pay(
+      '0xRouterAddress...',
+      '0xUSDCAddress...',
+      '0xMerchantWallet...',
+      10000n, // Amount in atomic units (6 decimals for USDC)
+      'order_123'
+    );
+    console.log(`Payment successful: ${txHash}`);
     ```
+
+    ### Manual: EIP-3009 (`agent.signTransferWithAuthorization()`)
+
+    For gasless payments, the agent signs an authorization off-chain, which the merchant then submits on-chain.
+
+    ```typescript
+    import { PayNodeAgentClient } from '@paynodelabs/sdk-js';
+
+    const agent = new PayNodeAgentClient(process.env.AGENT_PRIVATE_KEY);
+
+    // signs a transfer authorization
+    const { signature, authorization } = await agent.signTransferWithAuthorization(
+      '0xUSDCAddress...',
+      '0xMerchantWallet...',
+      10000n,
+      validAfter, // (Math.floor(Date.now() / 1000))
+      validBefore, // (+ 3600)
+      nonce // (ethers.randomBytes(32))
+    );
+    console.log("Signature generated:", signature);
+    ```
+
+
+
 
     ## 🏪 For Merchants (Express)
 
