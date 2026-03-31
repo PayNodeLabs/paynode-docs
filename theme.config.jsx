@@ -37,6 +37,18 @@ export default {
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       <meta property="og:title" content="PayNode Documentation" />
       <meta property="og:description" content="The official developer guide for the x402 Agentic Payment Protocol." />
+      {/* Google tag (gtag.js) */}
+      <script async src="https://www.googletagmanager.com/gtag/js?id=G-GC80PJYDL1" />
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-GC80PJYDL1');
+          `,
+        }}
+      />
     </>
   )
 };
