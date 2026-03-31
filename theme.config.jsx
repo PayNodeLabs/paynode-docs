@@ -36,7 +36,21 @@ export default {
       <link rel="manifest" href="/site.webmanifest" />
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       <meta property="og:title" content="PayNode Documentation" />
-      <meta property="og:description" content="The official developer guide for the x402 Agentic Payment Protocol." />
+      <meta property="og:description" content="The official developer guide for the x402 Agentic Payment Protocol and PayNode integration." />
+      <meta name="keywords" content="PayNode developer docs, x402 protocol, agentic payments SDK, AI agent integration, Base L2, USDC payments, HTTP 402 guide" />
+      <link rel="canonical" href="https://docs.paynode.dev" />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "TechArticle",
+            "headline": "PayNode Documentation",
+            "description": "The official developer guide for the x402 Agentic Payment Protocol.",
+            "url": "https://docs.paynode.dev"
+          })
+        }}
+      />
       {/* Google tag (gtag.js) */}
       <script async src="https://www.googletagmanager.com/gtag/js?id=G-GC80PJYDL1" />
       <script
